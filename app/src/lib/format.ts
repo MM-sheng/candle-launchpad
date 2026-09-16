@@ -11,8 +11,8 @@ function trim(s: string, digits: number) {
   return ff ? `${i}.${ff}` : i;
 }
 
-/** ~1.5 s per block on BSC testnet. */
-export const BLOCK_SECONDS = 1.5;
+/** BSC testnet after the Maxwell/Fermi upgrades: ~0.45 s per block (measured 2026-09). */
+export const BLOCK_SECONDS = 0.45;
 export function blocksToHuman(n: bigint | number): string {
   const s = Math.max(0, Number(n)) * BLOCK_SECONDS;
   if (s < 90) return `${Math.round(s)}s`;

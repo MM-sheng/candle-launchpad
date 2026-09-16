@@ -51,7 +51,7 @@ Committing ──(block > endBlock, requestRandomness)──► AwaitingRandomne
 - issuer 只能在 startBlock 之前取消；`minRaise` 未达或零成交 → Cancelled，全额退款、无罚没。
 - 罚没归 issuer；单地址出价次数不限；`minCutoffRatioBps` 默认 5000；揭示期默认约 10 分钟对应的区块数。
 - fee-on-transfer 代币在 createAuction 里按余额差拒绝。
-- BNB 测试网约 1.5s/块，公共 RPC 有延迟/限流：`revealDurationBlocks` 默认 ≥ 400（M4 的 auction 2 因 60 块揭示期太短而作废）。
+- BNB 测试网实测 **0.45s/块**（2026-09，Maxwell/Fermi 升级后），10 分钟 ≈ 1300 块；公共 RPC 有延迟/限流：`revealDurationBlocks` 默认 ≥ 1300（M4 的 auction 2 因 60 块揭示期太短而作废）。
 - 所有 revert 用自定义 error；所有转出资金的函数 `nonReentrant` + checks-effects-interactions；退款 pull 模式。
 
 ## 常用命令
@@ -75,6 +75,7 @@ forge test --gas-report --no-match-contract "Invariant|Fuzz"
 - `app/`：Next.js + wagmi + viem + RainbowKit。两个页面：创建拍卖（issuer）、拍卖详情（状态、倒计时并明确标注"截止时刻未知"、出价表单、salt 存 localStorage + 下载按钮、Revealing 阶段一键揭示、Finalized 后显示清算价/需求直方图/自己的成交结果/Claim 按钮）。
 - `scripts/crank.ts`（viem）：轮询状态，到点自动调 `requestRandomness` / `settleFallback` / `finalize`，监听合约事件。
 - 验收：两个钱包在 BNB 测试网上通过网页完成一场拍卖（`cd app && npm run dev`，另开终端 `npm run crank -- --all`）。把交易 hash 追加到 `docs/devnet-run.md`。
+- 已完成的替代验收：`scripts/e2e.ts` 用两个钱包走完 auction #4（与前端相同的合约调用），记录在 `docs/devnet-run.md`；页面各阶段显示均与链上一致。剩余只差人用 MetaMask 在网页上点一遍。
 
 ### M6 — Robinhood Chain 测试网
 - 先在 Chainlink 官方文档确认 VRF v2.5 已在 Robinhood Chain 测试网上线并拿到 coordinator/keyHash。**如果未上线，不要自行换其他随机源**，记录到"待决问题"并停下询问。

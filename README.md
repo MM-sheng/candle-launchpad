@@ -56,7 +56,7 @@ be claimed as soon as the cutoff is known.
 | Cancellation | Issuer: only before `startBlock`. `finalize`: nothing sold, or `totalSold × clearingPrice < minRaise` → Cancelled, everyone refunded in full (no penalty). |
 | Commitment | `keccak256(abi.encode(chainid, house, auctionId, bidder, tick, quantity, salt))` |
 | Fee-on-transfer tokens | Rejected in `createAuction` (balance delta must equal `supply`). |
-| Penalty recipient | Issuer. Bids per address: unlimited. Defaults: `minCutoffRatioBps = 5000`, reveal ≈ 10 min of blocks. |
+| Penalty recipient | Issuer. Bids per address: unlimited. Defaults: `minCutoffRatioBps = 5000`, reveal ≈ 10 min of blocks (BSC testnet ≈ 0.45 s/block → 1300 blocks). |
 
 ## Develop
 

@@ -61,3 +61,29 @@ Auction 2 received two bids and a successful VRF callback, but the public RPC lo
 
 - [`ChainlinkVRFProvider`](https://testnet.bscscan.com/address/0x4CDe5300Af89972a46A5D66A18d046932a6Cd406#code): BscScan `Source Code Verified — Exact Match`; Sourcify `exact_match`
 - [`CandleAuctionHouse`](https://testnet.bscscan.com/address/0xBa01c87bDC5B8b9EB94C97BEF156aa44475c14aD#code): BscScan `Source Code Verified — Exact Match`; Sourcify `exact_match`
+
+## Frontend-parity run (auctionId 4) — `scripts/e2e.ts`
+
+Two wallets, same contract calls the app makes (`commitmentHash` → `commitBid` → `revealBid` → `claim`), crank steps inline.
+
+- Supply: 100 CNDL, 3 ticks from 0.00001 tBNB
+- Bid A: tick 2, 50 CNDL (+0.0002 tBNB extra deposit to mask size)
+- Bid B: tick 0, 70 CNDL
+- Commit window: blocks `131392818`–`131392878`; VRF cutoff: block `131392877`
+- Clearing tick 0 (0.00001 tBNB/CNDL), sold 100 CNDL, marginal fill 50000000000000000000/70000000000000000000
+- Bid A: 50 CNDL, payment 0.0005 tBNB, refund 0.0012 tBNB
+- Bid B: 50 CNDL, payment 0.0005 tBNB, refund 0.0002 tBNB
+- After withdraw: house token balance 0, claimed 2/2
+
+| Action | Transaction |
+|---|---|
+| Create auction | [`0xe3add5ea2dfd913f41372c23a5f64d52fb10848af2a102b91cd0c2377d3c1f2f`](https://testnet.bscscan.com/tx/0xe3add5ea2dfd913f41372c23a5f64d52fb10848af2a102b91cd0c2377d3c1f2f) |
+| Commit bid A (tick 2, 50 CNDL, deposit 0.0017) | [`0x8d701c149581cd1c514d9b8dbb53876e42b70b27a5d8616a43af372aecda1922`](https://testnet.bscscan.com/tx/0x8d701c149581cd1c514d9b8dbb53876e42b70b27a5d8616a43af372aecda1922) |
+| Commit bid B (tick 0, 70 CNDL, deposit 0.0007) | [`0x5cc424594e8c1592faa7794e70ba3218cd7ba76762c9c80a5332fbafd69782ad`](https://testnet.bscscan.com/tx/0x5cc424594e8c1592faa7794e70ba3218cd7ba76762c9c80a5332fbafd69782ad) |
+| Request randomness | [`0xb40756b98d4242109c693dc678f22b74b9d17edcc22499fdf4325edd15bf859a`](https://testnet.bscscan.com/tx/0xb40756b98d4242109c693dc678f22b74b9d17edcc22499fdf4325edd15bf859a) |
+| Reveal bid A | [`0xbeae7ec43672aaf14bf813465dea6552c315fcfba4fe9f9f5d3bbaaa3327de6e`](https://testnet.bscscan.com/tx/0xbeae7ec43672aaf14bf813465dea6552c315fcfba4fe9f9f5d3bbaaa3327de6e) |
+| Reveal bid B | [`0xe66bc0d1602af169701c640af8d958eb7d979327b25663290fe93b6c0f101f81`](https://testnet.bscscan.com/tx/0xe66bc0d1602af169701c640af8d958eb7d979327b25663290fe93b6c0f101f81) |
+| Finalize | [`0x2a7258faf03c0e6d1081e0ce79e90058d982fd54d1d92c2f6b5ecbfdf1cffbec`](https://testnet.bscscan.com/tx/0x2a7258faf03c0e6d1081e0ce79e90058d982fd54d1d92c2f6b5ecbfdf1cffbec) |
+| Claim bid A | [`0x547db8ecac70aa7abefa39ecdf861091821c8cdc17a9b25b6c07c8419d2ebba3`](https://testnet.bscscan.com/tx/0x547db8ecac70aa7abefa39ecdf861091821c8cdc17a9b25b6c07c8419d2ebba3) |
+| Claim bid B | [`0x2ed080b1d03c965d72bd6805190643aa5f645cb69ce3cb25ced78c7ef16f9a66`](https://testnet.bscscan.com/tx/0x2ed080b1d03c965d72bd6805190643aa5f645cb69ce3cb25ced78c7ef16f9a66) |
+| Withdraw proceeds | [`0x45db65b2d93ec8c4ead1ecb175931ae4d3835725d6632eb41fc4353af2c49ba1`](https://testnet.bscscan.com/tx/0x45db65b2d93ec8c4ead1ecb175931ae4d3835725d6632eb41fc4353af2c49ba1) |

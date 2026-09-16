@@ -20,13 +20,13 @@ export default function CreatePage() {
     minPrice: "0.00001", // tBNB per whole token
     priceTick: "0.00001",
     numTicks: "10",
-    startDelay: "20", // blocks from now
-    commitLen: "400",
-    revealLen: "400",
+    startDelay: "30", // blocks from now (wallet confirmation takes a few blocks)
+    commitLen: "1300",
+    revealLen: "1300",
     minCutoffRatio: "50", // %
     penalty: "10", // %
     minRaise: "0",
-    timeout: "600",
+    timeout: "2000",
   });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
@@ -44,11 +44,19 @@ export default function CreatePage() {
       const decimals = await client.readContract({ address: token, abi: erc20Abi, functionName: "decimals" });
       const priceUnit = 10n ** BigInt(decimals);
       const supply = parseUnits(f.supply, decimals);
+      const allowance = await client.readContract({ address: token, abi: erc20Abi, functionName: "allowance", args: [address, HOUSE] });
+      if (allowance < supply) {
+        setStatus("Approving token…");
+        const h = await writeContractAsync({ address: token, abi: erc20Abi, functionName: "approve", args: [HOUSE, supply] });
+        await client.waitForTransactionReceipt({ hash: h });
+      }
+      // Re-read the block after the approval so startBlock is still in the future.
+      const nowBlock = await client.getBlockNumber({ cacheTime: 0 });
       const p = {
         token,
         numTicks: Number(f.numTicks),
-        startBlock: block + BigInt(f.startDelay),
-        endBlock: block + BigInt(f.startDelay) + BigInt(f.commitLen),
+        startBlock: nowBlock + BigInt(f.startDelay),
+        endBlock: nowBlock + BigInt(f.startDelay) + BigInt(f.commitLen),
         revealDurationBlocks: BigInt(f.revealLen),
         randomnessTimeoutBlocks: BigInt(f.timeout),
         minCutoffRatioBps: Math.round(Number(f.minCutoffRatio) * 100),
@@ -60,12 +68,6 @@ export default function CreatePage() {
         minRaise: parseUnits(f.minRaise || "0", 18),
       };
 
-      const allowance = await client.readContract({ address: token, abi: erc20Abi, functionName: "allowance", args: [address, HOUSE] });
-      if (allowance < supply) {
-        setStatus("Approving token…");
-        const h = await writeContractAsync({ address: token, abi: erc20Abi, functionName: "approve", args: [HOUSE, supply] });
-        await client.waitForTransactionReceipt({ hash: h });
-      }
       setStatus("Creating auction…");
       const hash = await writeContractAsync({ address: HOUSE, abi: houseAbi, functionName: "createAuction", args: [p] });
       const rc = await client.waitForTransactionReceipt({ hash });
@@ -104,7 +106,7 @@ export default function CreatePage() {
         <label>Randomness timeout (blocks)<input value={f.timeout} onChange={set("timeout")} type="number" min={1} /></label>
       </div>
       <p className="muted" style={{ marginTop: 12 }}>
-        Reveal period ≥ 400 blocks is recommended on BSC testnet (public RPCs lag). The random cutoff lands in the last {100 - Number(f.minCutoffRatio)}% of the commit window.
+        BSC testnet mines a block every ~0.45 s, so 1300 blocks ≈ 10 min; keep the reveal period ≥ 10 min (public RPCs lag). The random cutoff lands in the last {100 - Number(f.minCutoffRatio)}% of the commit window.
       </p>
       <div className="row">
         <button disabled={busy || !address}>{busy ? "Working…" : "Approve & create"}</button>
