@@ -8,3 +8,4 @@ legacy-solana/node_modules
 .DS_Store
 .app-*.log
 .e2e.log
+*.log
