@@ -1,5 +1,7 @@
 # Candle Launchpad (EVM · BNB Chain testnet)
 
+> Scope: BNB Chain testnet only. Robinhood Chain is deferred until Chainlink VRF is available there (the contract itself is chain-agnostic).
+
 Token launch auction with **commit-reveal bids**, a **random cutoff block** chosen by
 Chainlink VRF *after* the commit window closes, and a **uniform clearing price**.
 Quote asset is the native currency (tBNB).

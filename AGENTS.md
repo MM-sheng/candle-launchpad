@@ -77,9 +77,9 @@ forge test --gas-report --no-match-contract "Invariant|Fuzz"
 - 验收：两个钱包在 BNB 测试网上通过网页完成一场拍卖（`cd app && npm run dev`，另开终端 `npm run crank -- --all`）。把交易 hash 追加到 `docs/devnet-run.md`。
 - 已完成的替代验收：`scripts/e2e.ts` 用两个钱包走完 auction #4（与前端相同的合约调用），记录在 `docs/devnet-run.md`；页面各阶段显示均与链上一致。剩余只差人用 MetaMask 在网页上点一遍。
 
-### M6 — Robinhood Chain 测试网
-- 先在 Chainlink 官方文档确认 VRF v2.5 已在 Robinhood Chain 测试网上线并拿到 coordinator/keyHash。**如果未上线，不要自行换其他随机源**，记录到"待决问题"并停下询问。
-- 上线的话用同一合约部署，配置写进 `foundry.toml` 的 `robinhood_testnet`。
+### M6 — Robinhood Chain 测试网：已由用户决定暂不做（2026-09-16）
+- 原因：Chainlink VRF 未在 Robinhood Chain 上线。项目范围目前只到 BNB 测试网。
+- 若日后 VRF 上线，无需改合约：填 `.env` 的 coordinator/keyHash 后用 `Deploy.s.sol` 部署到 `robinhood_testnet` 即可。
 
 ## 绝对不要做
 
@@ -90,5 +90,4 @@ forge test --gas-report --no-match-contract "Invariant|Fuzz"
 ## 待决问题（记录在这里，等用户拍板）
 
 - `commitBid` 若把 `deposit`、`quantity` 限制为 `uint128` 可再省一个存储槽（约 22k gas/bid），但会改变接口类型。
-- **Robinhood Chain：Chainlink VRF v2.5 未上线**（2026-09-16 核实 https://docs.chain.link/vrf/v2-5/supported-networks ，支持列表 18 条链里没有 Robinhood；Chainlink 在 Robinhood Chain 上目前只有 Data Feeds）。按规划不得自行换随机源，M6 暂停，等用户决定：等待 VRF 上线 / 改用其他方案（需用户指定）/ 放弃 M6。
 - BNB 测试网 coordinator：Chainlink 文档当前列的是 `0x84b9B910527Ad5C03A9Ca831909E21e236EA7b06`，M4 实际用的 `0xDA3b641D438362C440Ac5458c57e00a712b66700` 也成功回调过。新部署时以文档为准。
