@@ -89,4 +89,5 @@ forge test --gas-report --no-match-contract "Invariant|Fuzz"
 ## 待决问题（记录在这里，等用户拍板）
 
 - `commitBid` 若把 `deposit`、`quantity` 限制为 `uint128` 可再省一个存储槽（约 22k gas/bid），但会改变接口类型。
-- Robinhood Chain 测试网 VRF 可用性尚未核实（M6 前必须确认）。
+- **Robinhood Chain：Chainlink VRF v2.5 未上线**（2026-09-16 核实 https://docs.chain.link/vrf/v2-5/supported-networks ，支持列表 18 条链里没有 Robinhood；Chainlink 在 Robinhood Chain 上目前只有 Data Feeds）。按规划不得自行换随机源，M6 暂停，等用户决定：等待 VRF 上线 / 改用其他方案（需用户指定）/ 放弃 M6。
+- BNB 测试网 coordinator：Chainlink 文档当前列的是 `0x84b9B910527Ad5C03A9Ca831909E21e236EA7b06`，M4 实际用的 `0xDA3b641D438362C440Ac5458c57e00a712b66700` 也成功回调过。新部署时以文档为准。
