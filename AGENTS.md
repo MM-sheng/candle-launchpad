@@ -21,6 +21,10 @@ test/Base.t.sol                     共用夹具 + claimAllAndCheck()（守恒�
 test/CandleAuctionHouse.t.sol       19 个单元测试（计划清单 1–11、13、14）
 test/Reentrancy.t.sol  test/Fuzz.t.sol  test/Invariant.t.sol
 script/Deploy.s.sol                 按 RANDOMNESS_PROVIDER=mock|chainlink 部署
+scripts/crank.ts                    viem crank（npm run crank -- --all）
+app/                                Next.js + wagmi + RainbowKit 前端
+abi/                                导出的 ABI（npm run abi 重新生成）
+docs/devnet-run.md                  M4 的部署与完整拍卖记录
 foundry.toml  remappings.txt  .env.example
 legacy-solana/                      旧的 Anchor 版本，已废弃，不要动
 ```
@@ -67,10 +71,10 @@ forge test --gas-report --no-match-contract "Invariant|Fuzz"
 4. 用 `cast` 或脚本跑通一场完整拍卖：createAuction → 两个地址 commitBid → 等 endBlock → requestRandomness → 等 VRF 回调 → revealBid → finalize → claim → withdrawProceeds。把每笔交易 hash 记录到 `docs/devnet-run.md`。
 5. 在 BscScan 上验证合约。
 
-### M5 — 前端 + crank
+### M5 — 前端 + crank（Claude 已写好代码，见 app/ 与 scripts/crank.ts；剩余：真机验收）
 - `app/`：Next.js + wagmi + viem + RainbowKit。两个页面：创建拍卖（issuer）、拍卖详情（状态、倒计时并明确标注"截止时刻未知"、出价表单、salt 存 localStorage + 下载按钮、Revealing 阶段一键揭示、Finalized 后显示清算价/需求直方图/自己的成交结果/Claim 按钮）。
 - `scripts/crank.ts`（viem）：轮询状态，到点自动调 `requestRandomness` / `settleFallback` / `finalize`，监听合约事件。
-- 验收：两个钱包在 BNB 测试网上通过网页完成一场拍卖。
+- 验收：两个钱包在 BNB 测试网上通过网页完成一场拍卖（`cd app && npm run dev`，另开终端 `npm run crank -- --all`）。把交易 hash 追加到 `docs/devnet-run.md`。
 
 ### M6 — Robinhood Chain 测试网
 - 先在 Chainlink 官方文档确认 VRF v2.5 已在 Robinhood Chain 测试网上线并拿到 coordinator/keyHash。**如果未上线，不要自行换其他随机源**，记录到"待决问题"并停下询问。
