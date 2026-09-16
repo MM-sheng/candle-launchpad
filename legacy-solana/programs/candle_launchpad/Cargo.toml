@@ -1,0 +1,24 @@
+[package]
+name = "candle_launchpad"
+version = "0.1.0"
+description = "Candle auction token launchpad (commit-reveal, random cutoff, uniform clearing price)"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "candle_launchpad"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+# Enable Switchboard On-Demand as the randomness source (M4). Without it, MockRandomness is used.
+switchboard = []
+
+[dependencies]
+anchor-lang = { version = "0.32.1", features = ["init-if-needed"] }
+anchor-spl = "0.32.1"
+solana-sha256-hasher = "2.3"
