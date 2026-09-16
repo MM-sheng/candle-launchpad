@@ -6,3 +6,4 @@ node_modules/
 legacy-solana/target
 legacy-solana/node_modules
 .DS_Store
+.app-*.log
