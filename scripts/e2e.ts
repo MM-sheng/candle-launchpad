@@ -102,10 +102,12 @@ async function main() {
     for (const l of r.logs) { try { const e = decodeEventLog({ abi: houseAbi, data: l.data, topics: l.topics }); if (e.eventName === "BidCommitted") b.index = (e.args as any).bidIndex; } catch {} }
   }
 
-  // ---- crank: randomness
+  // ---- crank: randomness (or wait for an external crank when E2E_EXTERNAL_CRANK=1)
+  const externalCrank = process.env.E2E_EXTERNAL_CRANK === "1";
   await waitBlock(p.endBlock, "end of commit window");
-  await send("Request randomness", wA, { address: house, abi: houseAbi, functionName: "requestRandomness", args: [id] });
-  const a1 = await waitState(id, "Revealing", 10 * 60_000);
+  if (!externalCrank) await send("Request randomness", wA, { address: house, abi: houseAbi, functionName: "requestRandomness", args: [id] });
+  else log("external crank mode: waiting for someone else to request randomness");
+  const a1 = await waitState(id, "Revealing", 15 * 60_000);
   log(`VRF cutoff = ${a1.cutoffBlock} (window ${p.startBlock}-${p.endBlock}), reveal until ${a1.revealEndBlock}`);
 
   // ---- reveal
@@ -117,8 +119,9 @@ async function main() {
 
   // ---- finalize
   await waitBlock(BigInt(a1.revealEndBlock), "end of reveal period");
-  await send("Finalize", wA, { address: house, abi: houseAbi, functionName: "finalize", args: [id] });
-  const a2 = await auction(id);
+  if (!externalCrank) await send("Finalize", wA, { address: house, abi: houseAbi, functionName: "finalize", args: [id] });
+  else log("external crank mode: waiting for someone else to finalize");
+  const a2 = await waitState(id, "Finalized", 15 * 60_000);
   log(`state ${STATE[a2.state]}, clearing tick ${a2.clearingTick}, totalSold ${formatUnits(a2.totalSold, dec)}, margin ${a2.marginSupply}/${a2.marginDemand}`);
 
   // ---- claim + withdraw
@@ -144,7 +147,7 @@ async function main() {
   const md = `
 ## Frontend-parity run (auctionId ${id}) — \`scripts/e2e.ts\`
 
-Two wallets, same contract calls the app makes (\`commitmentHash\` → \`commitBid\` → \`revealBid\` → \`claim\`), crank steps inline.
+Two wallets, same contract calls the app makes (\`commitmentHash\` → \`commitBid\` → \`revealBid\` → \`claim\`), crank steps ${externalCrank ? "performed by the external crank (Hetzner)" : "inline"}.
 
 - Supply: ${formatUnits(supply, dec)} ${sym}, 3 ticks from ${formatEther(p.minPrice)} tBNB
 - Bid A: tick 2, ${formatUnits(bids[0].qty, dec)} ${sym} (+${formatEther(bids[0].extra)} tBNB extra deposit to mask size)

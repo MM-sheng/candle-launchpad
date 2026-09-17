@@ -126,3 +126,28 @@ Two wallets, same contract calls the app makes (`commitmentHash` → `commitBid`
 | Claim bid A | [`0x6b560213ca7fc4200df780dabe19840ed5555ac9e1d6f3e394b617da109e39bd`](https://testnet.bscscan.com/tx/0x6b560213ca7fc4200df780dabe19840ed5555ac9e1d6f3e394b617da109e39bd) |
 | Claim bid B | [`0xf821bd99cbf1a7dc5243859e53f8177f017cb5ba54a353d787fc0ba80a70df71`](https://testnet.bscscan.com/tx/0xf821bd99cbf1a7dc5243859e53f8177f017cb5ba54a353d787fc0ba80a70df71) |
 | Withdraw proceeds | [`0xea356c9770bc32581cbec9752fe381b58e43d36731ffabed81a31a4a5b90b31e`](https://testnet.bscscan.com/tx/0xea356c9770bc32581cbec9752fe381b58e43d36731ffabed81a31a4a5b90b31e) |
+
+## Frontend-parity run (auctionId 2) — `scripts/e2e.ts`
+
+Two wallets, same contract calls the app makes (`commitmentHash` → `commitBid` → `revealBid` → `claim`), crank steps performed by the external crank (Hetzner).
+
+- Supply: 100 CNDL, 3 ticks from 0.00001 tBNB
+- Bid A: tick 2, 50 CNDL (+0.0002 tBNB extra deposit to mask size)
+- Bid B: tick 0, 70 CNDL
+- Commit window: blocks `131580957`–`131581017`; VRF cutoff: block `131581003`
+- Clearing tick 0 (0.00001 tBNB/CNDL), sold 100 CNDL, marginal fill 50000000000000000000/70000000000000000000
+- Bid A: 50 CNDL, payment 0.0005 tBNB, refund 0.0012 tBNB
+- Bid B: 50 CNDL, payment 0.0005 tBNB, refund 0.0002 tBNB
+- After withdraw: house token balance 100, claimed 2/2 (the 100 CNDL and 0.0017 tBNB left in the contract belong to auction #1 — a cancelled browser test with one unclaimed bid — not to this run)
+
+| Action | Transaction |
+|---|---|
+| Approve supply | [`0x0e9897cafd9c68af215bbb49b199d7f09adc667ef46934c475443521841d0253`](https://testnet.bscscan.com/tx/0x0e9897cafd9c68af215bbb49b199d7f09adc667ef46934c475443521841d0253) |
+| Create auction | [`0x51ca48a0f1f7d93fe3988ec10423c0cff34ce1c216536cc5b8df38e47485481b`](https://testnet.bscscan.com/tx/0x51ca48a0f1f7d93fe3988ec10423c0cff34ce1c216536cc5b8df38e47485481b) |
+| Commit bid A (tick 2, 50 CNDL, deposit 0.0017) | [`0x0dc829df829966b5c3224179a782a14a5ea711b490ddd18690613b32243cd526`](https://testnet.bscscan.com/tx/0x0dc829df829966b5c3224179a782a14a5ea711b490ddd18690613b32243cd526) |
+| Commit bid B (tick 0, 70 CNDL, deposit 0.0007) | [`0xbe9186b10f725d039ed248b6b22c1ec7b97bf43eeccf8ec28e0b36258445ba2a`](https://testnet.bscscan.com/tx/0xbe9186b10f725d039ed248b6b22c1ec7b97bf43eeccf8ec28e0b36258445ba2a) |
+| Reveal bid A | [`0x32b032bb7d24a69f6dc7a30091ebd3ebb14b27a3179f99bde3e700fdd6c2f0a8`](https://testnet.bscscan.com/tx/0x32b032bb7d24a69f6dc7a30091ebd3ebb14b27a3179f99bde3e700fdd6c2f0a8) |
+| Reveal bid B | [`0x62158624d0021c721b6a0dd4ba2fdd11066a9bcee3026591215d58db996e9407`](https://testnet.bscscan.com/tx/0x62158624d0021c721b6a0dd4ba2fdd11066a9bcee3026591215d58db996e9407) |
+| Claim bid A | [`0xe46e569b4d03823c82734fb05927c672babbb5d04d49ec00242b6c5e8bb6a891`](https://testnet.bscscan.com/tx/0xe46e569b4d03823c82734fb05927c672babbb5d04d49ec00242b6c5e8bb6a891) |
+| Claim bid B | [`0x611a1fbec32e111e3c37ca4a9d5aa527df6a78edd4ae5311ca226f22d1cd5fd8`](https://testnet.bscscan.com/tx/0x611a1fbec32e111e3c37ca4a9d5aa527df6a78edd4ae5311ca226f22d1cd5fd8) |
+| Withdraw proceeds | [`0xf9d8aeae5e1d96c0cb75929d4cbf0139bb380794d0b8f60a49e8aed897977243`](https://testnet.bscscan.com/tx/0xf9d8aeae5e1d96c0cb75929d4cbf0139bb380794d0b8f60a49e8aed897977243) |
