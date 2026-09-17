@@ -13,7 +13,8 @@ Quote asset is the native currency (tBNB).
 - `scripts/crank.ts` — polls auctions and calls `requestRandomness` / `settleFallback` / `finalize`
 - `app/` — Next.js + wagmi + RainbowKit UI (create auction, bid, reveal, claim)
 - `abi/` — exported ABIs (`npm run abi`)
-- `docs/devnet-run.md` — BNB testnet deployment + a full recorded auction
+- `docs/devnet-run.md` — BNB testnet deployments + recorded auctions
+- `docs/LAUNCH.md` — mainnet launch checklist and accepted risks
 - `legacy-solana/` — earlier Anchor prototype (superseded)
 
 ## Lifecycle
@@ -48,6 +49,21 @@ be claimed as soon as the cutoff is known.
 | auction Cancelled | 0 | full deposit |
 
 `cost` rounds up; Σ filled ≤ supply by construction.
+
+### Delivery guarantees (hostile tokens / receivers)
+
+Auction creation is permissionless, so the contract assumes the token may misbehave:
+
+- If a native push (refund / payout) is rejected by the receiver, the amount is parked in
+  `pendingNative[receiver]` and collectable with `withdrawPending()`. One hostile receiver can
+  never block anyone else's settlement.
+- If the token transfer on `claim` fails (blocklist, paused, lying `balanceOf`), the bidder still
+  receives their native refund immediately; the tokens and the payment are parked.
+  `claimTokens` retries delivery (credits the issuer on success); after 30 days
+  `refundUndelivered` returns the payment to the bidder and the tokens count as unsold.
+- The issuer is only ever credited for tokens that were actually delivered.
+
+Every state-changing function is `nonReentrant`.
 
 ## Design decisions
 

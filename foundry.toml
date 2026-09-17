@@ -18,7 +18,8 @@ fail_on_revert = false
 
 [rpc_endpoints]
 bsc_testnet = "${BSC_TESTNET_RPC_URL}"
-robinhood_testnet = "${ROBINHOOD_TESTNET_RPC_URL}"
+bsc_mainnet = "${BSC_MAINNET_RPC_URL}"
 
 [etherscan]
 bsc_testnet = { key = "${BSCSCAN_API_KEY}", chain = 97 }
+bsc_mainnet = { key = "${BSCSCAN_API_KEY}", chain = 56 }

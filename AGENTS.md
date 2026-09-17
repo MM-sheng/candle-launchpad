@@ -19,7 +19,8 @@ src/randomness/MockRandomnessProvider.sol   测试用，手动 fulfill()
 src/randomness/ChainlinkVRFProvider.sol     VRF v2.5 消费者，已编译、未在链上验证
 test/Base.t.sol                     共用夹具 + claimAllAndCheck()（守恒不变量断言）
 test/CandleAuctionHouse.t.sol       19 个单元测试（计划清单 1–11、13、14）
-test/Reentrancy.t.sol  test/Fuzz.t.sol  test/Invariant.t.sol
+test/Reentrancy.t.sol  test/Fuzz.t.sol  test/Invariant.t.sol  test/Delivery.t.sol
+docs/LAUNCH.md                      主网上线 checklist（哪些工程可做、哪些要人）
 script/Deploy.s.sol                 按 RANDOMNESS_PROVIDER=mock|chainlink 部署
 scripts/crank.ts                    viem crank（npm run crank -- --all）
 app/                                Next.js + wagmi + RainbowKit 前端
@@ -52,17 +53,23 @@ Committing ──(block > endBlock, requestRandomness)──► AwaitingRandomne
 - 罚没归 issuer；单地址出价次数不限；`minCutoffRatioBps` 默认 5000；揭示期默认约 10 分钟对应的区块数。
 - fee-on-transfer 代币在 createAuction 里按余额差拒绝。
 - BNB 测试网实测 **0.45s/块**（2026-09，Maxwell/Fermi 升级后），10 分钟 ≈ 1300 块；公共 RPC 有延迟/限流：`revealDurationBlocks` 默认 ≥ 1300（M4 的 auction 2 因 60 块揭示期太短而作废）。
-- 所有 revert 用自定义 error；所有转出资金的函数 `nonReentrant` + checks-effects-interactions；退款 pull 模式。
+- 所有 revert 用自定义 error；**所有**状态变更函数 `nonReentrant`；退款 pull 模式。
+- 资金交付兜底（2026-09-17 上线加固）：原生币推送失败 → `pendingNative` + `withdrawPending()`；代币交付失败 → 付款暂存，`claimTokens` 重试 / 30 天后 `refundUndelivered`；issuer 只对已交付的代币计收入。见 README「Delivery guarantees」和 `test/Delivery.t.sol`。
 
 ## 常用命令
 
 ```bash
 forge build
-forge test                                           # 23 个测试应全部通过
+forge test                                           # 28 个测试应全部通过
+slither . --filter-paths "lib/|test/|script/" --exclude-informational --exclude-low
 forge test --gas-report --no-match-contract "Invariant|Fuzz"
 ```
 
-## 下一步（按顺序做，每个里程碑完成后停下汇报测试结果 + gas 报告）
+## 当前阶段：主网上线准备（范围：BNB 主网、原生 BNB 报价、无手续费、无准入、不建池）
+
+按 `docs/LAUNCH.md` 推进。🔧 标记的可以直接做；🧑 标记的需要用户操作（审计、私钥、订阅、域名），做到那一步停下来问。
+
+## 历史里程碑（已完成，仅供参考）
 
 ### M4 — Chainlink VRF + BNB 测试网
 1. 打开 https://docs.chain.link/vrf/v2-5/supported-networks ，核对 BNB 测试网（chainId 97）的 coordinator 地址和 key hash，更新 `.env.example` 里的 `VRF_COORDINATOR` / `VRF_KEY_HASH`（现在的值是凭记忆写的，必须核对）。
@@ -90,4 +97,4 @@ forge test --gas-report --no-match-contract "Invariant|Fuzz"
 ## 待决问题（记录在这里，等用户拍板）
 
 - `commitBid` 若把 `deposit`、`quantity` 限制为 `uint128` 可再省一个存储槽（约 22k gas/bid），但会改变接口类型。
-- BNB 测试网 coordinator：Chainlink 文档当前列的是 `0x84b9B910527Ad5C03A9Ca831909E21e236EA7b06`，M4 实际用的 `0xDA3b641D438362C440Ac5458c57e00a712b66700` 也成功回调过。新部署时以文档为准。
+- BNB 测试网 coordinator：Chainlink 文档当前列的是 `0xDA3b641D438362C440Ac5458c57e00a712b66700`（文档里另一个 `0x84b9…7b06` 是 direct-funding wrapper，不是 coordinator）。

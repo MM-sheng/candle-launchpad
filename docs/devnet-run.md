@@ -87,3 +87,42 @@ Two wallets, same contract calls the app makes (`commitmentHash` → `commitBid`
 | Claim bid A | [`0x547db8ecac70aa7abefa39ecdf861091821c8cdc17a9b25b6c07c8419d2ebba3`](https://testnet.bscscan.com/tx/0x547db8ecac70aa7abefa39ecdf861091821c8cdc17a9b25b6c07c8419d2ebba3) |
 | Claim bid B | [`0x2ed080b1d03c965d72bd6805190643aa5f645cb69ce3cb25ced78c7ef16f9a66`](https://testnet.bscscan.com/tx/0x2ed080b1d03c965d72bd6805190643aa5f645cb69ce3cb25ced78c7ef16f9a66) |
 | Withdraw proceeds | [`0x45db65b2d93ec8c4ead1ecb175931ae4d3835725d6632eb41fc4353af2c49ba1`](https://testnet.bscscan.com/tx/0x45db65b2d93ec8c4ead1ecb175931ae4d3835725d6632eb41fc4353af2c49ba1) |
+
+
+---
+
+# Deployment 2 — hardened contract (2026-09-17)
+
+Redeployed after the mainnet-hardening changes (pending-native pull, undelivered-token handling,
+nonReentrant everywhere). Same VRF subscription; provider added as consumer.
+
+- `ChainlinkVRFProvider`: [`0x35051c34116338D8DA7dE51963E88Ec41168326f`](https://testnet.bscscan.com/address/0x35051c34116338D8DA7dE51963E88Ec41168326f#code) (verified)
+- `CandleAuctionHouse`: [`0x662Fe2bC63A414a020B20a7835832eaeBc594881`](https://testnet.bscscan.com/address/0x662Fe2bC63A414a020B20a7835832eaeBc594881#code) (verified)
+- The first deployment (`0xBa01…14aD`) stays live for reference; the app and crank now point at the new one.
+
+## Frontend-parity run (auctionId 0) — `scripts/e2e.ts`
+
+Two wallets, same contract calls the app makes (`commitmentHash` → `commitBid` → `revealBid` → `claim`), crank steps inline.
+
+- Supply: 100 CNDL, 3 ticks from 0.00001 tBNB
+- Bid A: tick 2, 50 CNDL (+0.0002 tBNB extra deposit to mask size)
+- Bid B: tick 0, 70 CNDL
+- Commit window: blocks `131535919`–`131535979`; VRF cutoff: block `131535957`
+- Clearing tick 0 (0.00001 tBNB/CNDL), sold 100 CNDL, marginal fill 50000000000000000000/70000000000000000000
+- Bid A: 50 CNDL, payment 0.0005 tBNB, refund 0.0012 tBNB
+- Bid B: 50 CNDL, payment 0.0005 tBNB, refund 0.0002 tBNB
+- After withdraw: house token balance 0, claimed 2/2
+
+| Action | Transaction |
+|---|---|
+| Approve supply | [`0x318b83983c782f63104394bf446cf861a13098d4ab8ee7b672ab5dc27063ec74`](https://testnet.bscscan.com/tx/0x318b83983c782f63104394bf446cf861a13098d4ab8ee7b672ab5dc27063ec74) |
+| Create auction | [`0x1d5ab9b3c91dd01736fb3ef18b791427bc1e16fa43b4867a1e0ff617b45ffeb3`](https://testnet.bscscan.com/tx/0x1d5ab9b3c91dd01736fb3ef18b791427bc1e16fa43b4867a1e0ff617b45ffeb3) |
+| Commit bid A (tick 2, 50 CNDL, deposit 0.0017) | [`0x6003ce64dc459f235b96aa189cb1551a870291c359e3404acaaa7e6e820ad5da`](https://testnet.bscscan.com/tx/0x6003ce64dc459f235b96aa189cb1551a870291c359e3404acaaa7e6e820ad5da) |
+| Commit bid B (tick 0, 70 CNDL, deposit 0.0007) | [`0xe0876f21899b63fb0b4f57a13eabe115730167ff71953e088da4b0b86046b9ca`](https://testnet.bscscan.com/tx/0xe0876f21899b63fb0b4f57a13eabe115730167ff71953e088da4b0b86046b9ca) |
+| Request randomness | [`0x04a8e34d7cd4a03181f1ee9a75f927d7c8322c830623e895ffa5b3ff94c0495e`](https://testnet.bscscan.com/tx/0x04a8e34d7cd4a03181f1ee9a75f927d7c8322c830623e895ffa5b3ff94c0495e) |
+| Reveal bid A | [`0xc516539c25352ddf4adc8518f4bedd0c62f34bc35a9636c92e5e21ee0d8fc7c6`](https://testnet.bscscan.com/tx/0xc516539c25352ddf4adc8518f4bedd0c62f34bc35a9636c92e5e21ee0d8fc7c6) |
+| Reveal bid B | [`0x941bb90b135ac61f319057dcf552f26854a6bce68f66490441a5970ba1825fc6`](https://testnet.bscscan.com/tx/0x941bb90b135ac61f319057dcf552f26854a6bce68f66490441a5970ba1825fc6) |
+| Finalize | [`0x534b5f3b21aea3920699a26fe662668460848b3ef52b3cbc79df761519dc7838`](https://testnet.bscscan.com/tx/0x534b5f3b21aea3920699a26fe662668460848b3ef52b3cbc79df761519dc7838) |
+| Claim bid A | [`0x6b560213ca7fc4200df780dabe19840ed5555ac9e1d6f3e394b617da109e39bd`](https://testnet.bscscan.com/tx/0x6b560213ca7fc4200df780dabe19840ed5555ac9e1d6f3e394b617da109e39bd) |
+| Claim bid B | [`0xf821bd99cbf1a7dc5243859e53f8177f017cb5ba54a353d787fc0ba80a70df71`](https://testnet.bscscan.com/tx/0xf821bd99cbf1a7dc5243859e53f8177f017cb5ba54a353d787fc0ba80a70df71) |
+| Withdraw proceeds | [`0xea356c9770bc32581cbec9752fe381b58e43d36731ffabed81a31a4a5b90b31e`](https://testnet.bscscan.com/tx/0xea356c9770bc32581cbec9752fe381b58e43d36731ffabed81a31a4a5b90b31e) |

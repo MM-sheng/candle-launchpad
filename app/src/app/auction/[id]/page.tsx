@@ -21,6 +21,9 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
   };
   const { data: demand } = useReadContract({ address: HOUSE, abi: houseAbi, functionName: "getDemand", args: [id] }) as { data?: bigint[] };
   const { data: bidCount } = useReadContract({ address: HOUSE, abi: houseAbi, functionName: "bidCount", args: [id] }) as { data?: bigint };
+  const { data: pendingNative, refetch: refetchPending } = useReadContract({
+    address: HOUSE, abi: houseAbi, functionName: "pendingNative", args: [address ?? "0x0000000000000000000000000000000000000000"], query: { enabled: !!address },
+  }) as { data?: bigint; refetch: () => void };
   const token = auction?.p.token;
   const { data: decimals } = useReadContract({ address: token, abi: erc20Abi, functionName: "decimals", query: { enabled: !!token } });
   const { data: symbol } = useReadContract({ address: token, abi: erc20Abi, functionName: "symbol", query: { enabled: !!token } });
@@ -55,6 +58,7 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
       const hash = await fn();
       await client!.waitForTransactionReceipt({ hash });
       refetch();
+      refetchPending();
       return hash;
     } catch (e: any) {
       setErr(e.shortMessage ?? e.message);
@@ -93,11 +97,30 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
         </div>
       </div>
 
+      <div className="warn">
+        <b>Unverified listing.</b> Anyone can create an auction here; the platform does not vet issuers or tokens. Your BNB is
+        protected by the contract (refunds are guaranteed even if the token misbehaves), but the token itself may be worthless.
+        Check the <a href={`${EXPLORER}/token/${p.token}`} target="_blank">token contract</a> and the issuer before bidding.
+      </div>
+
+      {pendingNative !== undefined && pendingNative > 0n && (
+        <div className="card" style={{ borderColor: "#7a5a12" }}>
+          <h2>You have {fmtBnb(pendingNative)} waiting</h2>
+          <p className="muted">A refund or payout could not be pushed to your address (it rejected the transfer). Pull it here.</p>
+          <button disabled={!!busy} onClick={() => tx("Withdrawing…", () => writeContractAsync({ address: HOUSE, abi: houseAbi, functionName: "withdrawPending", args: [] }))}>Withdraw pending BNB</button>
+        </div>
+      )}
+
       <Timeline a={a} now={now} />
 
       {state === "Committing" && !windowOver && (
         <BidForm a={a} id={id} dec={dec} sym={sym} disabled={!inWindow || !address} busy={busy} onSubmit={async (tick, qty, deposit) => {
           if (!address || !client) return;
+          if (!window.confirm(
+            `Your bid secret (salt) will be saved in this browser AND downloaded as a JSON file.\n\n` +
+            `If you lose it you cannot reveal, and ${p.unrevealedPenaltyBps / 100}% of your deposit is forfeited.\n\n` +
+            `Continue and keep the downloaded file safe?`,
+          )) return;
           const salt = randomSalt();
           const commitment = (await client.readContract({
             address: HOUSE, abi: houseAbi, functionName: "commitmentHash", args: [id, address, tick, qty, salt],
@@ -181,6 +204,8 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
         <MyBids a={a} id={id} dec={dec} sym={sym} local={local} chain={chainBids} busy={busy} onReveal={(b) =>
           tx("Revealing…", () => writeContractAsync({ address: HOUSE, abi: houseAbi, functionName: "revealBid", args: [id, BigInt(b.bidIndex), b.tick, BigInt(b.quantity), b.salt] }))
         } onClaim={(index) => tx("Claiming…", () => writeContractAsync({ address: HOUSE, abi: houseAbi, functionName: "claim", args: [id, index] }))}
+          onRetryTokens={(index) => tx("Retrying token delivery…", () => writeContractAsync({ address: HOUSE, abi: houseAbi, functionName: "claimTokens", args: [id, index] }))}
+          onRefundUndelivered={(index) => tx("Refunding payment…", () => writeContractAsync({ address: HOUSE, abi: houseAbi, functionName: "refundUndelivered", args: [id, index] }))}
           onImport={(json) => { try { importBids(json); reloadLocal(); } catch (e: any) { setErr(e.message); } }} />
       )}
 
@@ -276,11 +301,50 @@ function Histogram({ a, demand, dec }: { a: Auction; demand: bigint[]; dec: numb
   );
 }
 
-function MyBids({ a, id, dec, sym, local, chain, busy, onReveal, onClaim, onImport }: {
+function MyBids({ a, id, dec, sym, local, chain, busy, onReveal, onClaim, onRetryTokens, onRefundUndelivered, onImport }: {
   a: Auction; id: bigint; dec: number; sym: string; local: StoredBid[]; chain: (Bid & { index: bigint })[]; busy?: string;
-  onReveal: (b: StoredBid) => Promise<unknown>; onClaim: (index: bigint) => Promise<unknown>; onImport: (json: string) => void;
+  onReveal: (b: StoredBid) => Promise<unknown>; onClaim: (index: bigint) => Promise<unknown>;
+  onRetryTokens: (index: bigint) => Promise<unknown>; onRefundUndelivered: (index: bigint) => Promise<unknown>; onImport: (json: string) => void;
 }) {
   const client = usePublicClient();
+  // Claimed bids whose token transfer failed: detected via the TokenDeliveryDeferred event.
+  const [undelivered, setUndelivered] = useState<Record<string, { tokens: bigint; payment: bigint }>>({});
+  useEffect(() => {
+    if (!client || chain.length === 0) return;
+    (async () => {
+      const out: typeof undelivered = {};
+      for (const b of chain) {
+        if (!b.claimed) continue;
+        try {
+          const deferred = await client.getLogs({
+            address: HOUSE, fromBlock: a.revealEndBlock, toBlock: "latest",
+            event: { type: "event", name: "TokenDeliveryDeferred", inputs: [
+              { name: "auctionId", type: "uint256", indexed: true }, { name: "bidIndex", type: "uint256", indexed: true },
+              { name: "tokens", type: "uint256", indexed: false }, { name: "payment", type: "uint256", indexed: false } ] },
+            args: { auctionId: id, bidIndex: b.index },
+          });
+          if (deferred.length === 0) continue;
+          const delivered = await client.getLogs({
+            address: HOUSE, fromBlock: a.revealEndBlock, toBlock: "latest",
+            event: { type: "event", name: "TokensDelivered", inputs: [
+              { name: "auctionId", type: "uint256", indexed: true }, { name: "bidIndex", type: "uint256", indexed: true },
+              { name: "tokens", type: "uint256", indexed: false }, { name: "payment", type: "uint256", indexed: false } ] },
+            args: { auctionId: id, bidIndex: b.index },
+          });
+          const refunded = await client.getLogs({
+            address: HOUSE, fromBlock: a.revealEndBlock, toBlock: "latest",
+            event: { type: "event", name: "UndeliveredRefunded", inputs: [
+              { name: "auctionId", type: "uint256", indexed: true }, { name: "bidIndex", type: "uint256", indexed: true },
+              { name: "payment", type: "uint256", indexed: false } ] },
+            args: { auctionId: id, bidIndex: b.index },
+          });
+          const settled = [...delivered, ...refunded];
+          if (settled.length === 0) out[b.index.toString()] = { tokens: (deferred[0].args as any).tokens, payment: (deferred[0].args as any).payment };
+        } catch {}
+      }
+      setUndelivered(out);
+    })();
+  }, [client, chain, id, a.revealEndBlock, a.claimedBids]);
   const state = STATE[a.state];
   const [previews, setPreviews] = useState<Record<string, { tokens: bigint; payment: bigint; penalty: bigint }>>({});
   useEffect(() => {
@@ -337,6 +401,13 @@ function MyBids({ a, id, dec, sym, local, chain, busy, onReveal, onClaim, onImpo
                   <td>
                     {canReveal && <button disabled={!!busy} onClick={() => onReveal(secret!)}>Reveal</button>}
                     {canClaim && <button disabled={!!busy} onClick={() => onClaim(b.index)}>Claim</button>}
+                    {undelivered[b.index.toString()] && (
+                      <div className="row">
+                        <span className="err">Token delivery failed — {fmtTok(undelivered[b.index.toString()].tokens, dec, sym)} held, {fmtBnb(undelivered[b.index.toString()].payment)} parked</span>
+                        <button className="secondary" disabled={!!busy} onClick={() => onRetryTokens(b.index)}>Retry delivery</button>
+                        <button className="secondary" disabled={!!busy} onClick={() => onRefundUndelivered(b.index)}>Refund payment (after 30 days)</button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               );
