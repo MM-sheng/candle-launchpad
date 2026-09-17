@@ -12,7 +12,6 @@ import {
   createPublicClient,
   createWalletClient,
   http,
-  parseAbi,
   type Address,
   type Hex,
 } from "viem";
@@ -50,12 +49,16 @@ const wallet = createWalletClient({ chain: bscTestnet, transport: http(rpc), acc
 const log = (...a: unknown[]) => console.log(new Date().toISOString(), ...a);
 
 async function discoverAuctions(): Promise<bigint[]> {
-  const created = await pub.getLogs({
+  // auctionIds are contiguous from zero. Reading the counter avoids an
+  // unbounded eth_getLogs query, which public BSC RPCs reject.
+  const count = (await pub.readContract({
     address: house,
-    event: parseAbi(["event AuctionCreated(uint256 indexed auctionId, address indexed issuer, address indexed token, (address,uint8,uint64,uint64,uint64,uint64,uint16,uint16,uint256,uint256,uint256,uint256,uint256) params)"])[0],
-    fromBlock: "earliest",
-  });
-  return created.map((l) => l.args.auctionId!).sort((a, b) => (a < b ? -1 : 1));
+    abi: houseAbi,
+    functionName: "auctionCount",
+  })) as bigint;
+  const discovered: bigint[] = [];
+  for (let id = 0n; id < count; id++) discovered.push(id);
+  return discovered;
 }
 
 async function send(fn: string, id: bigint) {
@@ -105,7 +108,7 @@ async function main() {
       if (done.has(id)) continue;
       if (await step(id, block)) done.add(id);
     }
-    if (once || targets.every((id: bigint) => done.has(id))) {
+    if (once || (!all && targets.every((id: bigint) => done.has(id)))) {
       log("nothing left to crank; exiting");
       return;
     }
