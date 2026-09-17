@@ -1,15 +1,14 @@
-name: crank (testnet)
+name: crank fallback (testnet)
 
 # Advances every auction on the testnet deployment: requestRandomness / settleFallback / finalize.
-# Runs on a schedule so the public beta needs no always-on server.
+# The public beta currently uses the Hetzner crank container. This workflow is
+# retained as a manual fallback and can be scheduled again after its secret is set.
 # Secrets required (repo → Settings → Secrets → Actions):
 #   CRANK_PRIVATE_KEY  – testnet-only key holding ~0.3 tBNB
 # Variables (repo → Settings → Variables → Actions), optional overrides:
 #   AUCTION_HOUSE, BSC_TESTNET_RPC_URL
 
 on:
-  schedule:
-    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 concurrency:

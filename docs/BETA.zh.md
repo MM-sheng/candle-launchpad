@@ -8,15 +8,13 @@
 - 测试代币 CNDL `0xcb41…3c9a`，任何人可 mint，首页有一键领取按钮
 - 首页"3 步上手"引导：切网络 → 水龙头领 tBNB → mint 测试币
 - 全站"未审计"横幅
-- crank 用 GitHub Actions 每 5 分钟跑一次（`.github/workflows/crank.yml`），不需要服务器
+- crank 已在 Hetzner 上作为 Docker 容器持续运行；`.github/workflows/crank.yml` 保留为手动备用
 
 ## 你要做的（约 20 分钟）
 
-### 1. 让 crank 在 GitHub 上跑起来
+### 1. crank（已完成）
 
-仓库 → Settings → Secrets and variables → Actions：
-- **Secrets** 新增 `CRANK_PRIVATE_KEY`：一把只放测试币的私钥（可以就用现在 `.env` 里的 `PRIVATE_KEY`，或者 `BIDDER_B_PRIVATE_KEY`），确保里面有 ≥ 0.3 tBNB
-- 然后 Actions 页面 → "crank (testnet)" → Run workflow 手动跑一次，看它绿了
+Hetzner 上的 `candle-beta-crank` 会持续扫描并推进全部拍卖。GitHub Actions 工作流只作手动备用；若以后启用它，先在仓库 Actions Secrets 中配置 `CRANK_PRIVATE_KEY`。
 
 ### 2. 部署前端到 Vercel
 
