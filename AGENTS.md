@@ -65,7 +65,9 @@ slither . --filter-paths "lib/|test/|script/" --exclude-informational --exclude-
 forge test --gas-report --no-match-contract "Invariant|Fuzz"
 ```
 
-## 当前阶段：主网上线准备（范围：BNB 主网、原生 BNB 报价、无手续费、无准入、不建池）
+## 当前阶段：代码冻结（v1.0.0-rc1），等待用户办好主网账号后部署（范围：BNB 主网、原生 BNB 报价、无手续费、无准入、不建池）
+
+用户决定 **暂不做第三方审计**：主网只能小规模、知情用户使用，前端必须有「未审计」提示；provider 所有权必须转多签。合约代码不要再改。项目全貌见 `docs/PROJECT.zh.md`。
 
 按 `docs/LAUNCH.md` 推进。🔧 标记的可以直接做；🧑 标记的需要用户操作（审计、私钥、订阅、域名），做到那一步停下来问。
 

@@ -1,6 +1,10 @@
 # Candle Launchpad (EVM · BNB Chain testnet)
 
-> Scope: BNB Chain testnet only. Robinhood Chain is deferred until Chainlink VRF is available there (the contract itself is chain-agnostic).
+> **Status (2026-09-17):** feature-complete, code frozen at `v1.0.0-rc1`, running on BNB Chain
+> testnet. **Not audited, not on mainnet.** Mainnet path: `docs/LAUNCH.md`. 中文项目说明：`docs/PROJECT.zh.md`.
+>
+> v1 scope: BNB mainnet, native BNB quote asset, no platform fee, permissionless auction creation,
+> no automatic DEX pool. Robinhood Chain deferred (no Chainlink VRF there).
 
 Token launch auction with **commit-reveal bids**, a **random cutoff block** chosen by
 Chainlink VRF *after* the commit window closes, and a **uniform clearing price**.
@@ -15,6 +19,7 @@ Quote asset is the native currency (tBNB).
 - `abi/` — exported ABIs (`npm run abi`)
 - `docs/devnet-run.md` — BNB testnet deployments + recorded auctions
 - `docs/LAUNCH.md` — mainnet launch checklist and accepted risks
+- `docs/PROJECT.zh.md` — 中文项目说明与当前状态
 - `legacy-solana/` — earlier Anchor prototype (superseded)
 
 ## Lifecycle
