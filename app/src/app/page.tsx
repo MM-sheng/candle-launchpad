@@ -6,6 +6,7 @@ import { parseAbiItem } from "viem";
 import { HOUSE, EXPLORER } from "@/lib/config";
 import { houseAbi, STATE, type Auction } from "@/lib/contract";
 import { short } from "@/lib/format";
+import { TestnetOnboarding } from "@/components/TestnetOnboarding";
 
 type Row = { id: bigint; a: Auction };
 
@@ -41,6 +42,7 @@ export default function Home() {
 
   return (
     <>
+      <TestnetOnboarding />
       <div className="card">
         <h2>How it works</h2>
         <p className="muted">

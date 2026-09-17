@@ -20,6 +20,7 @@ Quote asset is the native currency (tBNB).
 - `docs/devnet-run.md` — BNB testnet deployments + recorded auctions
 - `docs/LAUNCH.md` — mainnet launch checklist and accepted risks
 - `docs/PROJECT.zh.md` — 中文项目说明与当前状态
+- `docs/BETA.zh.md` — 测试网公测发布手册（Vercel、GitHub Actions crank、推文草稿）
 - `legacy-solana/` — earlier Anchor prototype (superseded)
 
 ## Lifecycle

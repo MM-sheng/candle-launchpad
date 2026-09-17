@@ -6,6 +6,7 @@ import { erc20Abi, parseUnits, decodeEventLog, type Address } from "viem";
 import { HOUSE } from "@/lib/config";
 import { houseAbi } from "@/lib/contract";
 import { blocksToHuman } from "@/lib/format";
+import { TestnetOnboarding, TEST_TOKEN } from "@/components/TestnetOnboarding";
 
 export default function CreatePage() {
   const { address } = useAccount();
@@ -15,7 +16,7 @@ export default function CreatePage() {
   const router = useRouter();
 
   const [f, setF] = useState({
-    token: "",
+    token: TEST_TOKEN || "",
     supply: "1000",
     minPrice: "0.00001", // tBNB per whole token
     priceTick: "0.00001",
@@ -90,6 +91,8 @@ export default function CreatePage() {
   }
 
   return (
+    <>
+    <TestnetOnboarding compact />
     <form className="card" onSubmit={submit}>
       <h2>Create auction</h2>
       {!address && <div className="warn">Connect a wallet first.</div>}
@@ -116,5 +119,6 @@ export default function CreatePage() {
       </div>
       {err && <div className="err">{err}</div>}
     </form>
+    </>
   );
 }

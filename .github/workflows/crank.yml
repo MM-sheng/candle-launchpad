@@ -1,0 +1,35 @@
+name: crank (testnet)
+
+# Advances every auction on the testnet deployment: requestRandomness / settleFallback / finalize.
+# Runs on a schedule so the public beta needs no always-on server.
+# Secrets required (repo → Settings → Secrets → Actions):
+#   CRANK_PRIVATE_KEY  – testnet-only key holding ~0.3 tBNB
+# Variables (repo → Settings → Variables → Actions), optional overrides:
+#   AUCTION_HOUSE, BSC_TESTNET_RPC_URL
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: crank
+  cancel-in-progress: false
+
+jobs:
+  crank:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: crank --all --once
+        env:
+          CRANK_PRIVATE_KEY: ${{ secrets.CRANK_PRIVATE_KEY }}
+          AUCTION_HOUSE: ${{ vars.AUCTION_HOUSE || '0x662Fe2bC63A414a020B20a7835832eaeBc594881' }}
+          BSC_TESTNET_RPC_URL: ${{ vars.BSC_TESTNET_RPC_URL || 'https://data-seed-prebsc-1-s1.bnbchain.org:8545' }}
+        run: npm run crank -- --all --once
