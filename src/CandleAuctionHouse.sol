@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IRandomnessProvider, ICandleAuction} from "./interfaces/IRandomnessProvider.sol";
 
 /// @title CandleAuctionHouse
@@ -85,6 +86,22 @@ contract CandleAuctionHouse is ICandleAuction, ReentrancyGuard {
     /// @dev Native currency owed to bidders (deposits) and issuers (proceeds) but not yet paid out.
     uint256 public totalEscrowed;
 
+    /// @notice Native currency that could not be pushed to `account` (receiver reverted).
+    ///         Withdraw with `withdrawPending()`.
+    mapping(address => uint256) public pendingNative;
+
+    /// @dev Tokens that could not be delivered on claim (token reverted / blocklisted / lied about
+    ///      balance). The bid's payment stays escrowed until delivery succeeds via `claimTokens`,
+    ///      or is refunded to the bidder via `refundUndelivered` after UNDELIVERED_REFUND_DELAY.
+    struct Undelivered {
+        uint256 tokens;
+        uint256 payment;
+        uint64 since; // timestamp of the failed delivery
+    }
+    mapping(uint256 => mapping(uint256 => Undelivered)) internal _undelivered;
+    mapping(uint256 => uint32) internal _undeliveredCount;
+    uint256 public constant UNDELIVERED_REFUND_DELAY = 30 days;
+
     // ---------------------------------------------------------------- events
     event AuctionCreated(uint256 indexed auctionId, address indexed issuer, address indexed token, AuctionParams params);
     event AuctionCancelled(uint256 indexed auctionId);
@@ -95,6 +112,11 @@ contract CandleAuctionHouse is ICandleAuction, ReentrancyGuard {
     event AuctionFinalized(uint256 indexed auctionId, State state, uint8 clearingTick, uint256 clearingPrice, uint256 totalSold);
     event Claimed(uint256 indexed auctionId, uint256 indexed bidIndex, address indexed bidder, uint256 tokens, uint256 refund, uint256 payment, uint256 penalty);
     event ProceedsWithdrawn(uint256 indexed auctionId, uint256 nativeAmount, uint256 tokenAmount);
+    event NativePaymentDeferred(address indexed account, uint256 amount);
+    event PendingWithdrawn(address indexed account, uint256 amount);
+    event TokenDeliveryDeferred(uint256 indexed auctionId, uint256 indexed bidIndex, uint256 tokens, uint256 payment);
+    event TokensDelivered(uint256 indexed auctionId, uint256 indexed bidIndex, uint256 tokens, uint256 payment);
+    event UndeliveredRefunded(uint256 indexed auctionId, uint256 indexed bidIndex, uint256 payment);
 
     // ---------------------------------------------------------------- errors
     error InvalidParams();
@@ -120,6 +142,9 @@ contract CandleAuctionHouse is ICandleAuction, ReentrancyGuard {
     error NothingToWithdraw();
     error TransferFailed();
     error SupplyMismatch();
+    error NothingPending();
+    error DeliveryFailed();
+    error RefundDelayNotElapsed();
 
     constructor(IRandomnessProvider provider) {
         randomnessProvider = provider;
@@ -195,7 +220,7 @@ contract CandleAuctionHouse is ICandleAuction, ReentrancyGuard {
     }
 
     /// @notice Issuer may cancel only before the commit window opens.
-    function cancelAuction(uint256 auctionId) external {
+    function cancelAuction(uint256 auctionId) external nonReentrant {
         Auction storage a = _auctions[auctionId];
         if (msg.sender != a.issuer) revert Unauthorized();
         if (a.state != State.Committing) revert InvalidState();
@@ -218,7 +243,7 @@ contract CandleAuctionHouse is ICandleAuction, ReentrancyGuard {
         uint256 tokenAmount;
         if (a.state == State.Cancelled) {
             tokenAmount = a.p.supply - a.tokensWithdrawn; // bidders never receive tokens
-        } else if (a.claimedBids == _bids[auctionId].length) {
+        } else if (a.claimedBids == _bids[auctionId].length && _undeliveredCount[auctionId] == 0) {
             tokenAmount = a.p.supply - _tokensPaid[auctionId] - a.tokensWithdrawn; // incl. rounding dust
         } else {
             tokenAmount = a.p.supply - a.totalSold - a.tokensWithdrawn; // certainly unsold
@@ -236,7 +261,7 @@ contract CandleAuctionHouse is ICandleAuction, ReentrancyGuard {
     }
 
     // ---------------------------------------------------------------- bidders
-    function commitBid(uint256 auctionId, bytes32 commitment) external payable returns (uint256 bidIndex) {
+    function commitBid(uint256 auctionId, bytes32 commitment) external payable nonReentrant returns (uint256 bidIndex) {
         Auction storage a = _auctions[auctionId];
         if (a.state != State.Committing) revert InvalidState();
         if (block.number < a.p.startBlock || block.number > a.p.endBlock) revert CommitWindowClosed();
@@ -259,7 +284,7 @@ contract CandleAuctionHouse is ICandleAuction, ReentrancyGuard {
         emit BidCommitted(auctionId, bidIndex, msg.sender, msg.value, uint64(block.number));
     }
 
-    function revealBid(uint256 auctionId, uint256 bidIndex, uint8 tick, uint256 quantity, bytes32 salt) external {
+    function revealBid(uint256 auctionId, uint256 bidIndex, uint8 tick, uint256 quantity, bytes32 salt) external nonReentrant {
         Auction storage a = _auctions[auctionId];
         Bid storage b = _bids[auctionId][bidIndex];
         if (b.bidder != msg.sender) revert Unauthorized();
@@ -290,16 +315,72 @@ contract CandleAuctionHouse is ICandleAuction, ReentrancyGuard {
         // effects
         b.claimed = true;
         a.claimedBids += 1;
-        a.proceedsClaimed += payment;
         a.penaltiesClaimed += penalty;
-        _tokensPaid[auctionId] += tokens;
         uint256 refund = b.deposit - payment - penalty;
         totalEscrowed -= refund; // payment + penalty stay escrowed for the issuer
 
-        // interactions
-        if (tokens > 0) a.p.token.safeTransfer(b.bidder, tokens);
+        // interactions — token first; if it cannot be delivered the payment is parked, not credited
+        if (tokens > 0) {
+            if (_tryTransferToken(a.p.token, b.bidder, tokens)) {
+                a.proceedsClaimed += payment;
+                _tokensPaid[auctionId] += tokens;
+            } else {
+                _undelivered[auctionId][bidIndex] = Undelivered(tokens, payment, uint64(block.timestamp));
+                _undeliveredCount[auctionId] += 1;
+                emit TokenDeliveryDeferred(auctionId, bidIndex, tokens, payment);
+            }
+        }
         if (refund > 0) _payNative(b.bidder, refund);
         emit Claimed(auctionId, bidIndex, b.bidder, tokens, refund, payment, penalty);
+    }
+
+    /// @notice Retry delivering tokens for a claim whose token transfer failed. Anyone may call.
+    function claimTokens(uint256 auctionId, uint256 bidIndex) external nonReentrant {
+        Undelivered memory u = _undelivered[auctionId][bidIndex];
+        if (u.tokens == 0) revert NothingPending();
+        Auction storage a = _auctions[auctionId];
+        address bidder = _bids[auctionId][bidIndex].bidder;
+        if (!_tryTransferToken(a.p.token, bidder, u.tokens)) revert DeliveryFailed();
+        delete _undelivered[auctionId][bidIndex];
+        _undeliveredCount[auctionId] -= 1;
+        a.proceedsClaimed += u.payment;
+        _tokensPaid[auctionId] += u.tokens;
+        emit TokensDelivered(auctionId, bidIndex, u.tokens, u.payment);
+    }
+
+    /// @notice If tokens still cannot be delivered UNDELIVERED_REFUND_DELAY after the failed claim,
+    ///         the bidder takes their payment back; the tokens count as unsold. Anyone may call.
+    function refundUndelivered(uint256 auctionId, uint256 bidIndex) external nonReentrant {
+        Undelivered memory u = _undelivered[auctionId][bidIndex];
+        if (u.tokens == 0) revert NothingPending();
+        if (block.timestamp < uint256(u.since) + UNDELIVERED_REFUND_DELAY) revert RefundDelayNotElapsed();
+        Auction storage a = _auctions[auctionId];
+        address bidder = _bids[auctionId][bidIndex].bidder;
+        // one last delivery attempt keeps the issuer whole if the token recovered
+        if (_tryTransferToken(a.p.token, bidder, u.tokens)) {
+            delete _undelivered[auctionId][bidIndex];
+            _undeliveredCount[auctionId] -= 1;
+            a.proceedsClaimed += u.payment;
+            _tokensPaid[auctionId] += u.tokens;
+            emit TokensDelivered(auctionId, bidIndex, u.tokens, u.payment);
+            return;
+        }
+        delete _undelivered[auctionId][bidIndex];
+        _undeliveredCount[auctionId] -= 1;
+        totalEscrowed -= u.payment;
+        _payNative(bidder, u.payment);
+        emit UndeliveredRefunded(auctionId, bidIndex, u.payment);
+    }
+
+    /// @notice Collect native currency that a previous push transfer could not deliver.
+    function withdrawPending() external nonReentrant {
+        uint256 amount = pendingNative[msg.sender];
+        if (amount == 0) revert NothingPending();
+        pendingNative[msg.sender] = 0;
+        totalEscrowed -= amount;
+        (bool ok,) = msg.sender.call{value: amount}("");
+        if (!ok) revert TransferFailed();
+        emit PendingWithdrawn(msg.sender, amount);
     }
 
     // ---------------------------------------------------------------- randomness / lifecycle
@@ -315,7 +396,7 @@ contract CandleAuctionHouse is ICandleAuction, ReentrancyGuard {
     }
 
     /// @inheritdoc ICandleAuction
-    function onRandomness(uint256 auctionId, uint256 randomWord) external {
+    function onRandomness(uint256 auctionId, uint256 randomWord) external nonReentrant {
         if (msg.sender != address(randomnessProvider)) revert NotProvider();
         Auction storage a = _auctions[auctionId];
         if (a.state != State.AwaitingRandomness) revert RandomnessAlreadySet();
@@ -324,14 +405,14 @@ contract CandleAuctionHouse is ICandleAuction, ReentrancyGuard {
 
     /// @notice If randomness never arrives within `randomnessTimeoutBlocks` after `endBlock`,
     ///         degrade to a plain sealed-bid auction with cutoff = endBlock. Anyone may call.
-    function settleFallback(uint256 auctionId) external {
+    function settleFallback(uint256 auctionId) external nonReentrant {
         Auction storage a = _auctions[auctionId];
         if (a.state != State.Committing && a.state != State.AwaitingRandomness) revert InvalidState();
         if (block.number <= uint256(a.p.endBlock) + a.p.randomnessTimeoutBlocks) revert RandomnessTimeoutNotElapsed();
         _enterRevealing(auctionId, a, a.p.endBlock, true);
     }
 
-    function finalize(uint256 auctionId) external {
+    function finalize(uint256 auctionId) external nonReentrant {
         Auction storage a = _auctions[auctionId];
         if (a.state != State.Revealing) revert InvalidState();
         if (block.number <= a.revealEndBlock) revert RevealPeriodNotEnded();
@@ -356,7 +437,7 @@ contract CandleAuctionHouse is ICandleAuction, ReentrancyGuard {
         pure
         returns (uint8 clearingTick, uint256 marginSupply, uint256 marginDemand, uint256 totalSold)
     {
-        uint256 cumulative;
+        uint256 cumulative = 0;
         for (uint256 i = numTicks; i > 0; i--) {
             uint256 t = i - 1;
             uint256 d = demand[t];
@@ -377,7 +458,7 @@ contract CandleAuctionHouse is ICandleAuction, ReentrancyGuard {
         view
         returns (uint8 clearingTick, uint256 marginSupply, uint256 marginDemand, uint256 totalSold)
     {
-        uint256 cumulative;
+        uint256 cumulative = 0;
         for (uint256 i = numTicks; i > 0; i--) {
             uint256 t = i - 1;
             uint256 d = demand[t];
@@ -425,15 +506,28 @@ contract CandleAuctionHouse is ICandleAuction, ReentrancyGuard {
 
         uint256 filled = b.tick > a.clearingTick
             ? b.quantity
-            : b.quantity * a.marginSupply / a.marginDemand; // floor; Σ ≤ marginSupply
+            : Math.mulDiv(b.quantity, a.marginSupply, a.marginDemand); // floor; Σ ≤ marginSupply
         uint256 price = a.p.minPrice + uint256(a.clearingTick) * a.p.priceTick;
         payment = (filled * price + a.p.priceUnit - 1) / a.p.priceUnit;
         // cost(filled, clearing) ≤ cost(quantity, bid price) ≤ deposit
         return (filled, payment, 0);
     }
 
+    /// @dev Push native currency; if the receiver reverts, park it in `pendingNative`
+    ///      (still counted in totalEscrowed) so one hostile receiver cannot block settlement.
     function _payNative(address to, uint256 amount) internal {
         (bool ok,) = to.call{value: amount}("");
-        if (!ok) revert TransferFailed();
+        if (!ok) {
+            pendingNative[to] += amount;
+            totalEscrowed += amount;
+            emit NativePaymentDeferred(to, amount);
+        }
+    }
+
+    /// @dev Non-reverting ERC-20 transfer with SafeERC20 semantics (missing return value tolerated).
+    function _tryTransferToken(IERC20 token, address to, uint256 amount) internal returns (bool) {
+        if (address(token).code.length == 0) return false;
+        (bool ok, bytes memory data) = address(token).call(abi.encodeCall(IERC20.transfer, (to, amount)));
+        return ok && (data.length == 0 || abi.decode(data, (bool)));
     }
 }
