@@ -12,7 +12,7 @@ Status legend: ✅ done · 🔧 engineering, can be done now · 🧑 needs a hum
 | 1.1 | Fund-delivery hardening for hostile tokens / receivers (`pendingNative`, `claimTokens`, `refundUndelivered`) | ✅ |
 | 1.2 | `nonReentrant` on every state-changing function; Slither medium+ reviewed | ✅ |
 | 1.3 | Redeploy hardened contract to BNB testnet, run `scripts/e2e.ts`, update `docs/devnet-run.md` | ✅ auction #0 on `0x662F…4881` |
-| 1.4 | Freeze the code: tag `v1.0.0-rc1`, no further contract changes without re-audit | 🔧 |
+| 1.4 | Freeze the code: tag `v1.0.0-rc1`, no further contract changes without re-audit | ✅ tagged |
 | 1.5 | **External audit** of `src/` (one reputable firm; budget 2–4 weeks). Hand them `README.md`, this file, `test/`, and the Slither report | 🧑 |
 | 1.6 | Fix audit findings, re-run the full suite + fuzz with `FOUNDRY_PROFILE=ci` (10k runs), tag `v1.0.0` | ⏳ |
 
