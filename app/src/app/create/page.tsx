@@ -48,7 +48,8 @@ export default function CreatePage() {
       if (allowance < supply) {
         setStatus("Approving token…");
         const h = await writeContractAsync({ address: token, abi: erc20Abi, functionName: "approve", args: [HOUSE, supply] });
-        await client.waitForTransactionReceipt({ hash: h });
+        const approvalReceipt = await client.waitForTransactionReceipt({ hash: h });
+        if (approvalReceipt.status !== "success") throw new Error(`Token approval reverted: ${h}`);
       }
       // Re-read the block after the approval so startBlock is still in the future.
       const nowBlock = await client.getBlockNumber({ cacheTime: 0 });
@@ -71,6 +72,7 @@ export default function CreatePage() {
       setStatus("Creating auction…");
       const hash = await writeContractAsync({ address: HOUSE, abi: houseAbi, functionName: "createAuction", args: [p] });
       const rc = await client.waitForTransactionReceipt({ hash });
+      if (rc.status !== "success") throw new Error(`Auction creation reverted: ${hash}`);
       let id: bigint | undefined;
       for (const l of rc.logs) {
         try {
@@ -106,7 +108,7 @@ export default function CreatePage() {
         <label>Randomness timeout (blocks)<input value={f.timeout} onChange={set("timeout")} type="number" min={1} /></label>
       </div>
       <p className="muted" style={{ marginTop: 12 }}>
-        BSC testnet mines a block every ~0.45 s, so 1300 blocks ≈ 10 min; keep the reveal period ≥ 10 min (public RPCs lag). The random cutoff lands in the last {100 - Number(f.minCutoffRatio)}% of the commit window.
+        Timing estimates use ~0.45 s per block; actual timing varies by network. Verify block timing and allow enough time to reveal (public RPCs may lag). The random cutoff lands in the last {100 - Number(f.minCutoffRatio)}% of the commit window.
       </p>
       <div className="row">
         <button disabled={busy || !address}>{busy ? "Working…" : "Approve & create"}</button>

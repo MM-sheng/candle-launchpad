@@ -1,7 +1,7 @@
 # Candle Launchpad (EVM · BNB Chain testnet)
 
 > **Status (2026-09-17):** feature-complete, code frozen at `v1.0.0-rc1`, running on BNB Chain
-> testnet. **Not audited, not on mainnet.** Mainnet path: `docs/LAUNCH.md`. 中文项目说明：`docs/PROJECT.zh.md`.
+> testnet. **Not audited, not on mainnet.** Mainnet path: [launch checklist](docs/LAUNCH.md). 中文项目说明：[项目说明](docs/PROJECT.zh.md).
 >
 > v1 scope: BNB mainnet, native BNB quote asset, no platform fee, permissionless auction creation,
 > no automatic DEX pool. Robinhood Chain deferred (no Chainlink VRF there).

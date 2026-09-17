@@ -26,9 +26,10 @@ function load(): StoredBid[] {
   }
 }
 
-export function listBids(house: Address, auctionId: bigint, bidder?: Address): StoredBid[] {
+export function listBids(house: Address, auctionId: bigint, bidder?: Address, chainId = 97): StoredBid[] {
   return load().filter(
     (b) =>
+      b.chainId === chainId &&
       b.house.toLowerCase() === house.toLowerCase() &&
       b.auctionId === auctionId.toString() &&
       (!bidder || b.bidder.toLowerCase() === bidder.toLowerCase()),
@@ -36,7 +37,7 @@ export function listBids(house: Address, auctionId: bigint, bidder?: Address): S
 }
 
 export function saveBid(b: StoredBid) {
-  const all = load().filter((x) => !(x.house === b.house && x.auctionId === b.auctionId && x.bidIndex === b.bidIndex && x.bidder === b.bidder));
+  const all = load().filter((x) => !(x.chainId === b.chainId && x.house === b.house && x.auctionId === b.auctionId && x.bidIndex === b.bidIndex && x.bidder === b.bidder));
   all.push(b);
   localStorage.setItem(KEY, JSON.stringify(all));
 }

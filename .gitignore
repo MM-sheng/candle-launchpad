@@ -9,3 +9,6 @@ legacy-solana/node_modules
 .app-*.log
 .e2e.log
 *.log
+
+.env.mainnet
+.env.crank

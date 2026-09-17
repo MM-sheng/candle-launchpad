@@ -2,7 +2,7 @@
 import { use, useEffect, useMemo, useState } from "react";
 import { useAccount, useBlockNumber, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { erc20Abi, formatUnits, parseUnits, decodeEventLog, type Hex } from "viem";
-import { HOUSE, EXPLORER } from "@/lib/config";
+import { HOUSE, EXPLORER, CHAIN } from "@/lib/config";
 import { houseAbi, STATE, cost, priceOfTick, type Auction, type Bid } from "@/lib/contract";
 import { blocksToHuman, fmtBnb, fmtTok, short } from "@/lib/format";
 import { downloadJson, importBids, listBids, randomSalt, saveBid, type StoredBid } from "@/lib/salts";
@@ -35,7 +35,7 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
   const [local, setLocal] = useState<StoredBid[]>([]);
   const [chainBids, setChainBids] = useState<(Bid & { index: bigint })[]>([]);
 
-  const reloadLocal = () => setLocal(address ? listBids(HOUSE, id, address) : []);
+  const reloadLocal = () => setLocal(address ? listBids(HOUSE, id, address, CHAIN.id) : []);
   useEffect(reloadLocal, [address, id]);
 
   // My on-chain bids (indexes from local storage; also scan for ones committed elsewhere).
@@ -56,7 +56,8 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
     setBusy(label);
     try {
       const hash = await fn();
-      await client!.waitForTransactionReceipt({ hash });
+      const receipt = await client!.waitForTransactionReceipt({ hash });
+      if (receipt.status !== "success") throw new Error(`${label.replace(/…$/, "")} transaction reverted: ${hash}`);
       refetch();
       refetchPending();
       return hash;
@@ -98,8 +99,7 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
       </div>
 
       <div className="warn">
-        <b>Unverified listing.</b> Anyone can create an auction here; the platform does not vet issuers or tokens. Your BNB is
-        protected by the contract (refunds are guaranteed even if the token misbehaves), but the token itself may be worthless.
+        <b>Unverified listing.</b> Anyone can create an auction here; the platform does not vet issuers or tokens. The token may be worthless. Refund and delivery recovery paths are available, but are not a guarantee against malicious tokens or contract bugs.
         Check the <a href={`${EXPLORER}/token/${p.token}`} target="_blank">token contract</a> and the issuer before bidding.
       </div>
 
@@ -138,7 +138,7 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
             } catch {}
           }
           const rec: StoredBid = {
-            house: HOUSE, chainId: 97, auctionId: idStr, bidIndex, bidder: address, tick, quantity: qty.toString(),
+            house: HOUSE, chainId: CHAIN.id, auctionId: idStr, bidIndex, bidder: address, tick, quantity: qty.toString(),
             salt, deposit: deposit.toString(), commitTx: hash, createdAt: Date.now(),
           };
           saveBid(rec);

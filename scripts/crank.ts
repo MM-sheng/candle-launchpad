@@ -2,7 +2,7 @@
  * Crank: pushes auctions through the permissionless transitions.
  *
  *   npm run crank -- <auctionId> [<auctionId> ...] [--interval 5000] [--once]
- *   npm run crank -- --all            # crank every auction discovered via AuctionCreated logs
+ *   npm run crank -- --all            # discover every auction from auctionCount and keep watching
  *
  * Env (.env): CRANK_PRIVATE_KEY (or PRIVATE_KEY), BSC_TESTNET_RPC_URL, AUCTION_HOUSE.
  * Uses polling, not log subscriptions, because public BSC testnet RPCs rate-limit eth_getLogs.
@@ -12,18 +12,19 @@ import {
   createPublicClient,
   createWalletClient,
   http,
+  isAddress,
   type Address,
   type Hex,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { bscTestnet } from "viem/chains";
+import { bsc, bscTestnet } from "viem/chains";
 import houseAbi from "../abi/CandleAuctionHouse.json" with { type: "json" };
 
 const STATE = ["Committing", "AwaitingRandomness", "Revealing", "Finalized", "Cancelled"] as const;
 
 function env(name: string, fallback?: string): string {
   const v = process.env[name] ?? fallback;
-  if (v === undefined) throw new Error(`missing env ${name}`);
+  if (!v?.trim()) throw new Error(`missing env ${name}`);
   return v;
 }
 
@@ -39,12 +40,16 @@ if (!all && ids.length === 0) {
   process.exit(1);
 }
 
-const rpc = env("BSC_TESTNET_RPC_URL", "https://data-seed-prebsc-1-s1.bnbchain.org:8545");
+const chainId = Number(process.env.CHAIN_ID ?? "97");
+if (chainId !== 56 && chainId !== 97) throw new Error("CHAIN_ID must be 56 or 97");
+const chain = chainId === 56 ? bsc : bscTestnet;
+const rpc = chainId === 56 ? env("BSC_MAINNET_RPC_URL") : env("BSC_TESTNET_RPC_URL", "https://data-seed-prebsc-1-s1.bnbchain.org:8545");
 const house = env("AUCTION_HOUSE") as Address;
-const rawKey = env("CRANK_PRIVATE_KEY", process.env.PRIVATE_KEY);
+if (!isAddress(house)) throw new Error("Invalid AUCTION_HOUSE");
+const rawKey = env("CRANK_PRIVATE_KEY", chainId === 56 ? undefined : process.env.PRIVATE_KEY);
 const account = privateKeyToAccount((rawKey.startsWith("0x") ? rawKey : `0x${rawKey}`) as Hex);
-const pub = createPublicClient({ chain: bscTestnet, transport: http(rpc) });
-const wallet = createWalletClient({ chain: bscTestnet, transport: http(rpc), account });
+const pub = createPublicClient({ chain, transport: http(rpc) });
+const wallet = createWalletClient({ chain, transport: http(rpc), account });
 
 const log = (...a: unknown[]) => console.log(new Date().toISOString(), ...a);
 
@@ -99,7 +104,9 @@ async function step(id: bigint, block: bigint): Promise<boolean> {
 }
 
 async function main() {
-  log(`crank ${account.address} house=${house} rpc=${rpc}`);
+  if (await pub.getChainId() !== chainId) throw new Error("RPC chain does not match CHAIN_ID");
+  if ((await pub.getCode({ address: house }) ?? "0x") === "0x") throw new Error("No auction house bytecode at configured address");
+  log(`crank ${account.address} house=${house} chain=${chainId}`);
   let targets = all ? await discoverAuctions() : ids;
   const done = new Set<bigint>();
   for (;;) {
@@ -118,6 +125,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e);
+  console.error("Crank stopped; check RPC, network, contract configuration and wallet funding.");
   process.exit(1);
 });
