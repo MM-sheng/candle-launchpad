@@ -16,7 +16,7 @@
 
 Hetzner 上的 `candle-beta-crank` 会持续扫描并推进全部拍卖。GitHub Actions 工作流只作手动备用；若以后启用它，先在仓库 Actions Secrets 中配置 `CRANK_PRIVATE_KEY`。
 
-### 2. 部署前端到 Vercel
+### 2. 部署前端到 Vercel（已完成）
 
 1. https://vercel.com 用 GitHub 登录，Import 这个仓库
 2. **Root Directory** 填 `app`
@@ -29,14 +29,14 @@ NEXT_PUBLIC_TEST_TOKEN=0xcb415e4C71df31128f5597Ad067355396D343c9a
 NEXT_PUBLIC_RPC_URL=https://data-seed-prebsc-1-s1.bnbchain.org:8545,https://bsc-testnet-rpc.publicnode.com
 ```
 
-4. Deploy。拿到 `xxx.vercel.app` 链接（以后想换域名在 Vercel 里加）
+4. 生产环境已部署到 https://wickbid.com；`www.wickbid.com` 也指向同一部署
 5. 可选：https://cloud.reown.com 免费注册拿 `NEXT_PUBLIC_WC_PROJECT_ID`，加上后手机钱包能扫码
 
 ### 3. 自己先走一遍（已完成 2026-09-17）
 
 `scripts/e2e.ts` 以 `E2E_EXTERNAL_CRANK=1` 跑了 auction #2：两个钱包出价/揭示/领取，随机数请求和 finalize 全部由 Hetzner 上的 crank 完成（窗口关闭后 15 秒内请求、VRF 16 秒回调）。公网页面各阶段显示正确。记录在 `docs/devnet-run.md`。
 
-**发推前唯一要确认的**：`trycloudflare.com` 是临时地址，容器或隧道重启就会变。要么发推前绑一个固定域名（Cloudflare Tunnel 免费），要么接受推文里的链接可能失效、到时候再发一条更新。
+正式公测入口：**https://wickbid.com**。前端由 Vercel 托管，Hetzner 只运行 crank。
 
 ### 4. 发推
 
@@ -52,7 +52,7 @@ NEXT_PUBLIC_RPC_URL=https://data-seed-prebsc-1-s1.bnbchain.org:8545,https://bsc-
 > · 截止时间由 Chainlink VRF 随机决定，最后一秒狙击无效
 > · 所有人按同一清算价成交，多付的退
 >
-> BNB 测试网，免费试：https://unions-honest-product-exceptional.trycloudflare.com
+> BNB 测试网，免费试：https://wickbid.com
 > 代码开源：github.com/MM-sheng/candle-launchpad
 >
 > 未审计，测试币，欢迎来找 bug。
@@ -68,7 +68,7 @@ NEXT_PUBLIC_RPC_URL=https://data-seed-prebsc-1-s1.bnbchain.org:8545,https://bsc-
 >
 > 3/ 这是 Polkadot 平行链拍卖用过的机制，但在 EVM 上做成可用产品的很少。合约无管理员、不可升级、任何人可开拍卖；恶意代币也不能锁住别人的押金。
 >
-> 4/ 现在是测试网 beta：免费测试币、未审计、可能有 bug。想试的：https://unions-honest-product-exceptional.trycloudflare.com。想看代码的：github.com/MM-sheng/candle-launchpad
+> 4/ 现在是测试网 beta：免费测试币、未审计、可能有 bug。想试的：https://wickbid.com。想看代码的：github.com/MM-sheng/candle-launchpad
 >
 > 5/ 最想听到的反馈：如果你要发币，你会用这个吗？为什么不会？DM 开着。
 
@@ -80,7 +80,7 @@ NEXT_PUBLIC_RPC_URL=https://data-seed-prebsc-1-s1.bnbchain.org:8545,https://bsc-
 > · Random cutoff via Chainlink VRF — last-second sniping is pointless
 > · One uniform clearing price for everyone; overpayment refunded
 >
-> BNB testnet, free to try: https://unions-honest-product-exceptional.trycloudflare.com
+> BNB testnet, free to try: https://wickbid.com
 > Open source: github.com/MM-sheng/candle-launchpad
 >
 > Unaudited. Test money only. Break it and tell me.
