@@ -44,7 +44,7 @@ export default function Home() {
     <>
       <TestnetOnboarding />
       <div className="card">
-        <h2>How it works</h2>
+        <h2>Sealed bids. Random close. One fair price.</h2>
         <p className="muted">
           1. Bidders <b>commit</b> a hash of (price tick, quantity, salt) and escrow tBNB. 2. After the window closes, Chainlink VRF picks a
           <b> random cutoff block</b> — bids committed after it are refunded. 3. Valid bidders <b>reveal</b>. 4. Everyone pays the same

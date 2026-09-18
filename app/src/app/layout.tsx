@@ -5,8 +5,8 @@ import { Providers } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Candle Launchpad",
-  description: "Commit-reveal token auction with a random cutoff and uniform clearing price (BNB Chain)",
+  title: "WickBid",
+  description: "Sealed bids. Random close. One fair price. Candle-auction token launches on BNB Chain.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -15,7 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Providers>
           <header className="topbar">
-            <Link href="/" className="brand">🕯️ Candle Launchpad <span className="pill">{process.env.NEXT_PUBLIC_CHAIN_ID === "56" ? "BNB mainnet" : "BNB testnet"}</span></Link>
+            <Link href="/" className="brand">🕯️ WickBid <span className="pill">{process.env.NEXT_PUBLIC_CHAIN_ID === "56" ? "BNB mainnet" : "BNB testnet"}</span></Link>
             <nav>
               <Link href="/create">Create auction</Link>
               <ConnectButton chainStatus="icon" showBalance={false} />

@@ -1,4 +1,6 @@
-# Candle Launchpad — 项目说明（中文）
+# WickBid（原 Candle Launchpad）— 项目说明（中文）
+
+品牌：**WickBid** 🕯️ · wickbid.com · 口号 “Sealed bids. Random close. One fair price.”（2026-09-18 定名）
 
 更新：2026-09-17
 

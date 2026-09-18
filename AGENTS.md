@@ -1,4 +1,6 @@
-# Candle Launchpad — 给 Codex 的项目说明
+# WickBid（仓库名 candle-launchpad）— 给 Codex 的项目说明
+
+品牌已定为 **WickBid**（wickbid.com）。用户可见文案用 WickBid；代码、合约名、仓库名保持 candle-launchpad / CandleAuctionHouse 不动。
 
 你接手的是一个 **Solidity / Foundry** 项目：在 BNB Chain 测试网上做"随机截止 + 加密出价 + 统一清算价"的代币发行拍卖（candle auction）。合约与测试已经完成并全部通过，你的任务是继续后面的里程碑（见"下一步"）。
 

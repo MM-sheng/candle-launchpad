@@ -16,7 +16,7 @@ export const RPC = RPCS[0];
 export const EXPLORER = CHAIN.blockExplorers.default.url;
 
 export const wagmiConfig = getDefaultConfig({
-  appName: "Candle Launchpad",
+  appName: "WickBid",
   projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID || "00000000000000000000000000000000",
   chains: [CHAIN],
   transports: { [CHAIN.id]: fallback(RPCS.map((u) => http(u, { retryCount: 2 })), { rank: false }) },
