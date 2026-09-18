@@ -5,6 +5,7 @@ a { color: var(--accent); text-decoration: none; }
 .topbar { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:10; }
 .topbar nav { display:flex; gap:12px; align-items:center; flex-shrink:0; }
 .navlink { color:var(--fg); font-weight:500; white-space:nowrap; }
+.language-toggle { background:transparent; color:var(--fg); border:1px solid var(--line); padding:6px 9px; font-size:12px; white-space:nowrap; }
 .brand { color:var(--fg); font-weight:700; font-size:17px; display:flex; align-items:center; gap:6px; white-space:nowrap; min-width:0; }
 .logo { font-size:18px; }
 .pill { font-size:10px; background:var(--panel); border:1px solid var(--line); border-radius:99px; padding:1px 7px; color:var(--muted); font-weight:500; text-transform:uppercase; letter-spacing:.05em; }

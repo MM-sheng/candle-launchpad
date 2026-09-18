@@ -7,8 +7,10 @@ import { houseAbi, STATE, cost, priceOfTick, type Auction, type Bid } from "@/li
 import { blocksToHuman, fmtBnb, fmtTok, short } from "@/lib/format";
 import { downloadJson, importBids, listBids, randomSalt, saveBid, type StoredBid } from "@/lib/salts";
 import { PhaseSteps } from "@/components/PhaseSteps";
+import { useLanguage } from "@/components/Language";
 
 export default function AuctionPage({ params }: { params: Promise<{ id: string }> }) {
+  const { zh } = useLanguage();
   const { id: idStr } = use(params);
   const id = BigInt(idStr);
   const { address } = useAccount();
@@ -69,7 +71,7 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
     }
   }
 
-  if (!auction) return <div className="muted">Loading…</div>;
+  if (!auction) return <div className="muted">{zh ? "加载中…" : "Loading…"}</div>;
   const a = auction;
   const p = a.p;
   const state = STATE[a.state];
@@ -87,22 +89,22 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
           <h2 style={{ margin: 0 }}>
             Auction #{idStr} <span className={`state ${state}`}>{state}</span>
           </h2>
-          <span className="muted">block {now.toString()}</span>
+          <span className="muted">{zh ? "区块" : "block"} {now.toString()}</span>
         </div>
         <div style={{ marginTop: 16 }}><PhaseSteps a={a} now={now} /></div>
         <div className="grid">
-          <KV k="Token" v={<a href={`${EXPLORER}/token/${p.token}`} target="_blank">{sym || short(p.token)}</a>} />
-          <KV k="Supply" v={fmtTok(p.supply, dec, sym)} />
-          <KV k="Price range" v={`${fmtBnb(p.minPrice, 8)} – ${fmtBnb(priceOfTick(p, p.numTicks - 1), 8)} / ${sym || "token"}`} />
-          <KV k="Ticks" v={`${p.numTicks} × ${fmtBnb(p.priceTick, 8)}`} />
-          <KV k="Issuer" v={short(a.issuer)} />
-          <KV k="Unrevealed penalty" v={`${p.unrevealedPenaltyBps / 100}%`} />
+          <KV k={zh ? "代币" : "Token"} v={<a href={`${EXPLORER}/token/${p.token}`} target="_blank">{sym || short(p.token)}</a>} />
+          <KV k={zh ? "供应量" : "Supply"} v={fmtTok(p.supply, dec, sym)} />
+          <KV k={zh ? "价格范围" : "Price range"} v={`${fmtBnb(p.minPrice, 8)} – ${fmtBnb(priceOfTick(p, p.numTicks - 1), 8)} / ${sym || (zh ? "代币" : "token")}`} />
+          <KV k={zh ? "价格档" : "Ticks"} v={`${p.numTicks} × ${fmtBnb(p.priceTick, 8)}`} />
+          <KV k={zh ? "发行方" : "Issuer"} v={short(a.issuer)} />
+          <KV k={zh ? "未揭示罚金" : "Unrevealed penalty"} v={`${p.unrevealedPenaltyBps / 100}%`} />
         </div>
       </div>
 
       <div className="notice">
-        <b>Unverified listing.</b> Anyone can create auctions here; the token may be worthless. Your BNB is refundable by contract, the token is not vetted.{" "}
-        <a href={`${EXPLORER}/token/${p.token}`} target="_blank">Token contract ↗</a>
+        <b>{zh ? "未经审核的项目。" : "Unverified listing."}</b> {zh ? "任何人都能创建拍卖，代币可能毫无价值。BNB 由合约提供退款路径，代币未经平台审核。" : "Anyone can create auctions here; the token may be worthless. Your BNB is refundable by contract, the token is not vetted."}{" "}
+        <a href={`${EXPLORER}/token/${p.token}`} target="_blank">{zh ? "代币合约" : "Token contract"} ↗</a>
       </div>
 
       {pendingNative !== undefined && pendingNative > 0n && (
@@ -151,10 +153,10 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
 
       {state === "Committing" && windowOver && (
         <div className="card">
-          <h2>Commit window closed</h2>
-          <p className="muted">Anyone can now request the random cutoff. The crank normally does this automatically.</p>
+          <h2>{zh ? "提交窗口已关闭" : "Commit window closed"}</h2>
+          <p className="muted">{zh ? "现在任何人都能请求随机截止点，crank 通常会自动完成。" : "Anyone can now request the random cutoff. The crank normally does this automatically."}</p>
           <div className="row">
-            <button disabled={!!busy} onClick={() => tx("Requesting randomness…", () => writeContractAsync({ address: HOUSE, abi: houseAbi, functionName: "requestRandomness", args: [id] }))}>Request randomness</button>
+            <button disabled={!!busy} onClick={() => tx(zh ? "正在请求随机数…" : "Requesting randomness…", () => writeContractAsync({ address: HOUSE, abi: houseAbi, functionName: "requestRandomness", args: [id] }))}>{zh ? "请求随机数" : "Request randomness"}</button>
             {now > timeoutAt && (
               <button className="secondary" disabled={!!busy} onClick={() => tx("Fallback…", () => writeContractAsync({ address: HOUSE, abi: houseAbi, functionName: "settleFallback", args: [id] }))}>Settle fallback (cutoff = end)</button>
             )}
@@ -164,8 +166,8 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
 
       {state === "AwaitingRandomness" && (
         <div className="card">
-          <h2>Waiting for Chainlink VRF</h2>
-          <p className="muted">Request id <code>{a.randomnessRequestId.toString()}</code>. The callback usually lands within a minute.</p>
+          <h2>{zh ? "等待 Chainlink VRF" : "Waiting for Chainlink VRF"}</h2>
+          <p className="muted">{zh ? "请求编号" : "Request id"} <code>{a.randomnessRequestId.toString()}</code>。{zh ? "回调通常会在一分钟内到达。" : "The callback usually lands within a minute."}</p>
           {now > timeoutAt && (
             <button className="secondary" disabled={!!busy} onClick={() => tx("Fallback…", () => writeContractAsync({ address: HOUSE, abi: houseAbi, functionName: "settleFallback", args: [id] }))}>VRF never answered — settle fallback</button>
           )}
@@ -174,20 +176,20 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
 
       {state === "Revealing" && now > a.revealEndBlock && (
         <div className="card">
-          <h2>Reveal period over</h2>
-          <button disabled={!!busy} onClick={() => tx("Finalizing…", () => writeContractAsync({ address: HOUSE, abi: houseAbi, functionName: "finalize", args: [id] }))}>Finalize</button>
+          <h2>{zh ? "揭示期已结束" : "Reveal period over"}</h2>
+          <button disabled={!!busy} onClick={() => tx(zh ? "正在结算…" : "Finalizing…", () => writeContractAsync({ address: HOUSE, abi: houseAbi, functionName: "finalize", args: [id] }))}>{zh ? "结算" : "Finalize"}</button>
         </div>
       )}
 
       {(state === "Finalized" || state === "Cancelled") && (
         <div className="card">
-          <h2>Result</h2>
+          <h2>{zh ? "结果" : "Result"}</h2>
           {state === "Cancelled" ? (
-            <p>Auction cancelled — every deposit is refundable in full, tokens return to the issuer.</p>
+            <p>{zh ? "拍卖已取消——所有押金均可全额退款，代币退回发行方。" : "Auction cancelled — every deposit is refundable in full, tokens return to the issuer."}</p>
           ) : (
             <div className="grid">
-              <KV k="Clearing price" v={`${fmtBnb(clearingPrice, 8)} / ${sym || "token"} (tick ${a.clearingTick})`} />
-              <KV k="Sold" v={fmtTok(a.totalSold, dec, sym)} />
+              <KV k={zh ? "清算价" : "Clearing price"} v={`${fmtBnb(clearingPrice, 8)} / ${sym || (zh ? "代币" : "token")} (${zh ? "价格档" : "tick"} ${a.clearingTick})`} />
+              <KV k={zh ? "已售" : "Sold"} v={fmtTok(a.totalSold, dec, sym)} />
               <KV k="Marginal tick fill" v={a.marginDemand > 0n ? `${((Number(a.marginSupply) / Number(a.marginDemand)) * 100).toFixed(2)}%` : "100%"} />
               <KV k="Claimed" v={`${a.claimedBids} / ${bidCount?.toString() ?? "?"} bids`} />
             </div>
@@ -227,22 +229,23 @@ function KV({ k, v }: { k: string; v: React.ReactNode }) {
 }
 
 function Timeline({ a, now }: { a: Auction; now: bigint }) {
+  const { zh } = useLanguage();
   const p = a.p;
   const state = STATE[a.state];
   const lower = p.startBlock + ((p.endBlock - p.startBlock) * BigInt(p.minCutoffRatioBps) + 9999n) / 10000n;
   return (
     <div className="card">
-      <h2>Timeline</h2>
+      <h2>{zh ? "时间线" : "Timeline"}</h2>
       <div className="grid">
-        <KV k="Commit window" v={`${p.startBlock} → ${p.endBlock}`} />
+        <KV k={zh ? "提交窗口" : "Commit window"} v={`${p.startBlock} → ${p.endBlock}`} />
         {state === "Committing" && now < p.startBlock && <KV k="Opens in" v={`${(p.startBlock - now).toString()} blocks ≈ ${blocksToHuman(p.startBlock - now)}`} />}
         {state === "Committing" && now >= p.startBlock && now <= p.endBlock && <KV k="Window ends in" v={`${(p.endBlock - now).toString()} blocks ≈ ${blocksToHuman(p.endBlock - now)}`} />}
-        <KV k="Random cutoff" v={a.cutoffBlock > 0n ? `block ${a.cutoffBlock}` : <span className="warn" style={{ padding: "2px 8px" }}>unknown — drawn after the window from [{lower.toString()}, {p.endBlock.toString()}]</span>} />
+        <KV k={zh ? "随机截止" : "Random cutoff"} v={a.cutoffBlock > 0n ? `${zh ? "区块" : "block"} ${a.cutoffBlock}` : <span className="warn" style={{ padding: "2px 8px" }}>{zh ? `未知——窗口关闭后从 [${lower}, ${p.endBlock}] 中抽取` : `unknown — drawn after the window from [${lower.toString()}, ${p.endBlock.toString()}]`}</span>} />
         {a.revealEndBlock > 0n && <KV k="Reveal until" v={`${a.revealEndBlock} (${now <= a.revealEndBlock ? `${(a.revealEndBlock - now).toString()} blocks left ≈ ${blocksToHuman(a.revealEndBlock - now)}` : "ended"})`} />}
       </div>
       {state === "Committing" && (
         <p className="warn" style={{ marginTop: 12 }}>
-          The cutoff block is chosen by VRF <b>after</b> the window closes. Bids landing after it are refunded. Bidding early is safer.
+          {zh ? <>截止区块在窗口关闭<b>后</b>由 VRF 选出，晚于它的出价会退款。越早出价越稳妥。</> : <>The cutoff block is chosen by VRF <b>after</b> the window closes. Bids landing after it are refunded. Bidding early is safer.</>}
         </p>
       )}
     </div>
@@ -253,6 +256,7 @@ function BidForm({ a, id, dec, sym, disabled, busy, onSubmit }: {
   a: Auction; id: bigint; dec: number; sym: string; disabled: boolean; busy?: string;
   onSubmit: (tick: number, qty: bigint, deposit: bigint) => Promise<void>;
 }) {
+  const { zh } = useLanguage();
   const p = a.p;
   const [tick, setTick] = useState(0);
   const [qty, setQty] = useState("10");
@@ -262,21 +266,21 @@ function BidForm({ a, id, dec, sym, disabled, busy, onSubmit }: {
   const deposit = minDeposit + (() => { try { return parseUnits(extra || "0", 18); } catch { return 0n; } })();
   return (
     <form className="card" onSubmit={(e) => { e.preventDefault(); onSubmit(tick, q, deposit); }}>
-      <h2>Place a sealed bid</h2>
+      <h2>{zh ? "提交密封出价" : "Place a sealed bid"}</h2>
       <div className="grid">
-        <label>Price tick
+        <label>{zh ? "价格档" : "Price tick"}
           <select value={tick} onChange={(e) => setTick(Number(e.target.value))}>
             {Array.from({ length: p.numTicks }, (_, i) => (
               <option key={i} value={i}>tick {i} — {fmtBnb(priceOfTick(p, i), 8)} / {sym || "token"}</option>
             ))}
           </select>
         </label>
-        <label>Quantity ({sym || "tokens"})<input value={qty} onChange={(e) => setQty(e.target.value)} /></label>
-        <label>Extra deposit (tBNB, optional — hides your bid size)<input value={extra} onChange={(e) => setExtra(e.target.value)} /></label>
+        <label>{zh ? "数量" : "Quantity"} ({sym || (zh ? "代币" : "tokens")})<input value={qty} onChange={(e) => setQty(e.target.value)} /></label>
+        <label>{zh ? "额外押金（tBNB，可选，用于隐藏出价规模）" : "Extra deposit (tBNB, optional — hides your bid size)"}<input value={extra} onChange={(e) => setExtra(e.target.value)} /></label>
       </div>
-      <p className="muted">Minimum deposit for this bid: <b>{fmtBnb(minDeposit, 8)}</b>. Total escrow: <b>{fmtBnb(deposit, 8)}</b>. Unused deposit is refunded on claim; you pay the clearing price, not your tick.</p>
-      <p className="warn">Your salt is saved in this browser <b>and</b> downloaded as a JSON file. Keep it — without it the bid can't be revealed and {p.unrevealedPenaltyBps / 100}% of the deposit is forfeited.</p>
-      <button disabled={disabled || !!busy || q === 0n}>{busy ?? "Commit bid"}</button>
+      <p className="muted">{zh ? <>最低押金：<b>{fmtBnb(minDeposit, 8)}</b>。总托管：<b>{fmtBnb(deposit, 8)}</b>。领取时退回未使用押金；最终支付清算价。</> : <>Minimum deposit for this bid: <b>{fmtBnb(minDeposit, 8)}</b>. Total escrow: <b>{fmtBnb(deposit, 8)}</b>. Unused deposit is refunded on claim; you pay the clearing price, not your tick.</>}</p>
+      <p className="warn">{zh ? <>salt 会保存在本浏览器并下载为 JSON 文件。请妥善保管；没有它就无法揭示出价，并会罚没 {p.unrevealedPenaltyBps / 100}% 的押金。</> : <>Your salt is saved in this browser <b>and</b> downloaded as a JSON file. Keep it — without it the bid can't be revealed and {p.unrevealedPenaltyBps / 100}% of the deposit is forfeited.</>}</p>
+      <button disabled={disabled || !!busy || q === 0n}>{busy ?? (zh ? "提交出价" : "Commit bid")}</button>
     </form>
   );
 }
@@ -308,6 +312,7 @@ function MyBids({ a, id, dec, sym, local, chain, busy, onReveal, onClaim, onRetr
   onReveal: (b: StoredBid) => Promise<unknown>; onClaim: (index: bigint) => Promise<unknown>;
   onRetryTokens: (index: bigint) => Promise<unknown>; onRefundUndelivered: (index: bigint) => Promise<unknown>; onImport: (json: string) => void;
 }) {
+  const { zh } = useLanguage();
   const client = usePublicClient();
   // Claimed bids whose token transfer failed: detected via the TokenDeliveryDeferred event.
   const [undelivered, setUndelivered] = useState<Record<string, { tokens: bigint; payment: bigint }>>({});
@@ -367,19 +372,19 @@ function MyBids({ a, id, dec, sym, local, chain, busy, onReveal, onClaim, onRetr
   return (
     <div className="card">
       <div className="row" style={{ justifyContent: "space-between" }}>
-        <h2 style={{ margin: 0 }}>My bids</h2>
+        <h2 style={{ margin: 0 }}>{zh ? "我的出价" : "My bids"}</h2>
         <div className="row">
-          <button className="secondary" onClick={() => downloadJson(`candle-bids-${id}.json`, local)} disabled={local.length === 0}>Download salts</button>
+          <button className="secondary" onClick={() => downloadJson(`candle-bids-${id}.json`, local)} disabled={local.length === 0}>{zh ? "下载 salts" : "Download salts"}</button>
           <label className="secondary" style={{ cursor: "pointer" }}>
-            <span className="muted">Import salts file</span>
+            <span className="muted">{zh ? "导入 salts 文件" : "Import salts file"}</span>
             <input type="file" accept="application/json" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) f.text().then(onImport); }} />
           </label>
         </div>
       </div>
-      {chain.length === 0 && <p className="muted">No bids from this wallet.</p>}
+      {chain.length === 0 && <p className="muted">{zh ? "这个钱包还没有出价。" : "No bids from this wallet."}</p>}
       {chain.length > 0 && (
         <table>
-          <thead><tr><th>#</th><th>Committed</th><th>Deposit</th><th>Status</th><th>Outcome</th><th></th></tr></thead>
+          <thead><tr><th>#</th><th>{zh ? "提交" : "Committed"}</th><th>{zh ? "押金" : "Deposit"}</th><th>{zh ? "状态" : "Status"}</th><th>{zh ? "结果" : "Outcome"}</th><th></th></tr></thead>
           <tbody>
             {chain.map((b) => {
               const secret = local.find((l) => l.bidIndex === b.index.toString());
@@ -401,8 +406,8 @@ function MyBids({ a, id, dec, sym, local, chain, busy, onReveal, onClaim, onRetr
                       : state === "Finalized" || state === "Cancelled" || invalid ? `refund ${fmtBnb(b.deposit)}` : "")}
                   </td>
                   <td>
-                    {canReveal && <button disabled={!!busy} onClick={() => onReveal(secret!)}>Reveal</button>}
-                    {canClaim && <button disabled={!!busy} onClick={() => onClaim(b.index)}>Claim</button>}
+                    {canReveal && <button disabled={!!busy} onClick={() => onReveal(secret!)}>{zh ? "揭示" : "Reveal"}</button>}
+                    {canClaim && <button disabled={!!busy} onClick={() => onClaim(b.index)}>{zh ? "领取" : "Claim"}</button>}
                     {undelivered[b.index.toString()] && (
                       <div className="row">
                         <span className="err">Token delivery failed — {fmtTok(undelivered[b.index.toString()].tokens, dec, sym)} held, {fmtBnb(undelivered[b.index.toString()].payment)} parked</span>
