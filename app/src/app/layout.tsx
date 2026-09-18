@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Providers } from "./providers";
+import { RiskBanner } from "@/components/RiskBanner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,13 +16,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Providers>
           <header className="topbar">
-            <Link href="/" className="brand">🕯️ WickBid <span className="pill">{process.env.NEXT_PUBLIC_CHAIN_ID === "56" ? "BNB mainnet" : "BNB testnet"}</span></Link>
+            <Link href="/" className="brand">
+              <span className="logo">🕯️</span> WickBid
+              <span className="pill">{process.env.NEXT_PUBLIC_CHAIN_ID === "56" ? "mainnet" : "testnet"}</span>
+            </Link>
             <nav>
-              <Link href="/create">Create auction</Link>
-              <ConnectButton chainStatus="icon" showBalance={false} />
+              <Link href="/create" className="navlink">Create<span className="hide-sm"> auction</span></Link>
+              <ConnectButton chainStatus="none" showBalance={false} accountStatus={{ smallScreen: "avatar", largeScreen: "address" }} label="Connect" />
             </nav>
           </header>
-          <main className="container"><div className="warn" role="note"><strong>Unaudited / 未审计.</strong> These contracts have not received a third-party audit. You may lose funds. Auctions are permissionless and issuers are not vetted. Failed token delivery may require a 30-day wait before a refund can be attempted. Only participate if you understand these risks.</div>{children}</main>
+          <main className="container"><RiskBanner />{children}</main>
+          <footer className="footer">
+            <span>WickBid — Sealed bids. Random close. One fair price.</span>
+            <a href="https://github.com/MM-sheng/candle-launchpad" target="_blank">Source</a>
+          </footer>
         </Providers>
       </body>
     </html>

@@ -6,6 +6,7 @@ import { HOUSE, EXPLORER, CHAIN } from "@/lib/config";
 import { houseAbi, STATE, cost, priceOfTick, type Auction, type Bid } from "@/lib/contract";
 import { blocksToHuman, fmtBnb, fmtTok, short } from "@/lib/format";
 import { downloadJson, importBids, listBids, randomSalt, saveBid, type StoredBid } from "@/lib/salts";
+import { PhaseSteps } from "@/components/PhaseSteps";
 
 export default function AuctionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: idStr } = use(params);
@@ -88,7 +89,8 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
           </h2>
           <span className="muted">block {now.toString()}</span>
         </div>
-        <div className="grid" style={{ marginTop: 16 }}>
+        <div style={{ marginTop: 16 }}><PhaseSteps a={a} now={now} /></div>
+        <div className="grid">
           <KV k="Token" v={<a href={`${EXPLORER}/token/${p.token}`} target="_blank">{sym || short(p.token)}</a>} />
           <KV k="Supply" v={fmtTok(p.supply, dec, sym)} />
           <KV k="Price range" v={`${fmtBnb(p.minPrice, 8)} – ${fmtBnb(priceOfTick(p, p.numTicks - 1), 8)} / ${sym || "token"}`} />
@@ -98,9 +100,9 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
         </div>
       </div>
 
-      <div className="warn">
-        <b>Unverified listing.</b> Anyone can create an auction here; the platform does not vet issuers or tokens. The token may be worthless. Refund and delivery recovery paths are available, but are not a guarantee against malicious tokens or contract bugs.
-        Check the <a href={`${EXPLORER}/token/${p.token}`} target="_blank">token contract</a> and the issuer before bidding.
+      <div className="notice">
+        <b>Unverified listing.</b> Anyone can create auctions here; the token may be worthless. Your BNB is refundable by contract, the token is not vetted.{" "}
+        <a href={`${EXPLORER}/token/${p.token}`} target="_blank">Token contract ↗</a>
       </div>
 
       {pendingNative !== undefined && pendingNative > 0n && (

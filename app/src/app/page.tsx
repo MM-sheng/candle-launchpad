@@ -5,7 +5,7 @@ import { usePublicClient, useBlockNumber } from "wagmi";
 import { parseAbiItem } from "viem";
 import { HOUSE, EXPLORER } from "@/lib/config";
 import { houseAbi, STATE, type Auction } from "@/lib/contract";
-import { short } from "@/lib/format";
+import { short, blocksToHuman } from "@/lib/format";
 import { TestnetOnboarding } from "@/components/TestnetOnboarding";
 
 type Row = { id: bigint; a: Auction };
@@ -42,9 +42,13 @@ export default function Home() {
 
   return (
     <>
+      <div className="card hero">
+        <h1>Sealed bids. Random close. One fair price.</h1>
+        <p>Token launches as a candle auction: bids stay sealed, Chainlink VRF picks the real closing block after the window shuts, and every winner pays the same clearing price.</p>
+      </div>
       <TestnetOnboarding />
       <div className="card">
-        <h2>Sealed bids. Random close. One fair price.</h2>
+        <h2>How it works</h2>
         <p className="muted">
           1. Bidders <b>commit</b> a hash of (price tick, quantity, salt) and escrow tBNB. 2. After the window closes, Chainlink VRF picks a
           <b> random cutoff block</b> — bids committed after it are refunded. 3. Valid bidders <b>reveal</b>. 4. Everyone pays the same
@@ -59,38 +63,26 @@ export default function Home() {
         {err && <div className="err">{err}</div>}
         {rows === null && !err && <div className="muted">Loading…</div>}
         {rows && rows.length === 0 && <div className="muted">No auctions yet. <Link href="/create">Create one</Link>.</div>}
-        {rows && rows.length > 0 && (
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>State</th>
-                <th>Issuer</th>
-                <th>Commit window</th>
-                <th>Ticks</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ id, a }) => (
-                <tr key={id.toString()}>
-                  <td>{id.toString()}</td>
-                  <td>
-                    <span className={`state ${STATE[a.state]}`}>{STATE[a.state]}</span>
-                  </td>
-                  <td>{short(a.issuer)}</td>
-                  <td>
-                    {a.p.startBlock.toString()} – {a.p.endBlock.toString()}
-                  </td>
-                  <td>{a.p.numTicks}</td>
-                  <td>
-                    <Link href={`/auction/${id}`}>Open →</Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        {rows && rows.length > 0 && rows.map(({ id, a }) => {
+          const st = STATE[a.state];
+          const now = block ?? 0n;
+          let when = "";
+          if (st === "Committing") when = now < a.p.startBlock ? `opens in ~${blocksToHuman(a.p.startBlock - now)}` : now <= a.p.endBlock ? `commit window closes in ~${blocksToHuman(a.p.endBlock - now)} (random cutoff inside)` : "window closed — awaiting random close";
+          else if (st === "AwaitingRandomness") when = "waiting for Chainlink VRF";
+          else if (st === "Revealing") when = now <= a.revealEndBlock ? `reveal until block ${a.revealEndBlock} (~${blocksToHuman(a.revealEndBlock - now)})` : "reveal ended — awaiting finalize";
+          else if (st === "Finalized") when = `settled · ${a.claimedBids} claimed`;
+          else when = "cancelled · full refunds";
+          return (
+            <Link key={id.toString()} href={`/auction/${id}`} className="list-row" style={{ color: "inherit" }}>
+              <span className="id">#{id.toString()}</span>
+              <span>
+                <span className={`state ${st}`}>{st}</span>
+                <div className="meta">{when} · {a.p.numTicks} ticks · issuer {short(a.issuer)}</div>
+              </span>
+              <span className="muted">→</span>
+            </Link>
+          );
+        })}
       </div>
     </>
   );
