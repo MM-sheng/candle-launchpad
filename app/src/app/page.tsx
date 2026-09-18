@@ -78,7 +78,7 @@ export default function Home() {
                 <span className={`state ${st}`}>{st}</span>
                 <div className="meta">{when} · {a.p.numTicks} {zh ? "个价格档 · 发行方" : "ticks · issuer"} {short(a.issuer)}</div>
               </span>
-              <span className="muted">→</span>
+              <span className="arrow">→</span>
             </Link>
           );
         })}

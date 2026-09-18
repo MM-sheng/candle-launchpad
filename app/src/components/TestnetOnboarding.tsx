@@ -39,9 +39,9 @@ export function TestnetOnboarding({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <div className="card" style={{ borderColor: "#1e3a5f" }}>
-      <h2>{zh ? "测试网公测 — 三步开始" : "Testnet beta — try it in 3 steps"}</h2>
-      <ol style={{ margin: "0 0 12px 18px", lineHeight: 1.8 }}>
+    <div className="card onboard">
+      <h2>{zh ? "三步开始" : "Try it in three steps"}</h2>
+      <ol>
         <li>{zh ? <>连接钱包并切换到 <b>BNB 智能链测试网</b>（chainId 97），RainbowKit 会提示添加网络。</> : <>Connect a wallet and switch to <b>BNB Smart Chain Testnet</b> (chainId 97). RainbowKit will offer to add it.</>}</li>
         <li>{zh ? <>从<a href={FAUCET} target="_blank">官方水龙头</a>领取免费 tBNB，用于 gas 和出价（0.3 tBNB 足够）。</> : <>Get free tBNB for gas and bids from the <a href={FAUCET} target="_blank">official faucet</a> (0.3 tBNB is plenty).</>}</li>
         <li>

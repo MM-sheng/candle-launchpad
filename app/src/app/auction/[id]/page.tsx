@@ -87,7 +87,7 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
       <div className="card">
         <div className="row" style={{ justifyContent: "space-between" }}>
           <h2 style={{ margin: 0 }}>
-            Auction #{idStr} <span className={`state ${state}`}>{state}</span>
+            Auction #{idStr} <span className={`state ${state}`} style={{ marginLeft: 12, verticalAlign: "middle" }}>{state}</span>
           </h2>
           <span className="muted">{zh ? "区块" : "block"} {now.toString()}</span>
         </div>
@@ -108,7 +108,7 @@ export default function AuctionPage({ params }: { params: Promise<{ id: string }
       </div>
 
       {pendingNative !== undefined && pendingNative > 0n && (
-        <div className="card" style={{ borderColor: "#7a5a12" }}>
+        <div className="card" style={{ borderColor: "var(--accent)" }}>
           <h2>You have {fmtBnb(pendingNative)} waiting</h2>
           <p className="muted">A refund or payout could not be pushed to your address (it rejected the transfer). Pull it here.</p>
           <button disabled={!!busy} onClick={() => tx("Withdrawing…", () => writeContractAsync({ address: HOUSE, abi: houseAbi, functionName: "withdrawPending", args: [] }))}>Withdraw pending BNB</button>
@@ -291,7 +291,7 @@ function Histogram({ a, demand, dec }: { a: Auction; demand: bigint[]; dec: numb
   if (max === 0n) return <p className="muted">No revealed demand.</p>;
   return (
     <>
-      <h3 style={{ margin: "16px 0 4px", fontSize: 14 }} className="muted">Revealed demand by tick (green = filled, amber = marginal)</h3>
+      <h3 style={{ margin: "16px 0 4px", fontSize: 14 }} className="muted">Revealed demand by tick — white filled, amber marginal</h3>
       <div className="hist" style={{ marginBottom: 24 }}>
         {Array.from({ length: n }, (_, i) => {
           const h = Number((demand[i] * 100n) / max);
