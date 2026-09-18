@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePublicClient, useBlockNumber } from "wagmi";
-import { parseAbiItem } from "viem";
 import { HOUSE, EXPLORER } from "@/lib/config";
 import { houseAbi, STATE, type Auction } from "@/lib/contract";
 import { short, blocksToHuman } from "@/lib/format";
