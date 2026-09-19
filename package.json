@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "crank": "tsx scripts/crank.ts",
+    "demo-auction": "tsx scripts/demo-auction.ts",
     "abi": "forge inspect CandleAuctionHouse abi --json > abi/CandleAuctionHouse.json && forge inspect ChainlinkVRFProvider abi --json > abi/ChainlinkVRFProvider.json"
   },
   "dependencies": {

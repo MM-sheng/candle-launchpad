@@ -2,6 +2,10 @@
 
 目标：把测试网版本放到公网，任何人用免费测试币就能试；发推收集反馈。**不涉及真钱。**
 
+## 快速创建演示拍卖
+
+运行 `npm run demo-auction` 可创建一场默认 5 分钟提交窗口的测试网拍卖。也可使用 `npm run demo-auction -- --minutes 5 --supply 1000` 调整时长和供应量。脚本只允许 BNB Chain 测试网（chainId 97），会按需铸造测试 CNDL、授权并创建拍卖，最后输出 WickBid 页面链接。外部 crank 会在窗口关闭后自动请求 VRF；需要截“随机截止”阶段时，请提前打开页面等待。
+
 ## 已经准备好的
 
 - 合约在 BNB 测试网：[`0x662F…4881`](https://testnet.bscscan.com/address/0x662Fe2bC63A414a020B20a7835832eaeBc594881#code)
